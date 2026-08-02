@@ -77,12 +77,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "باب رزق — نظام نقاط البيع" },
-      { name: "description", content: "نظام نقاط البيع لمقهى ومكملات باب رزق." },
-      { property: "og:title", content: "باب رزق — نظام نقاط البيع" },
-      { property: "og:description", content: "نظام نقاط البيع لمقهى ومكملات باب رزق." },
+      { title: "باب رزق — نقطة البيع" },
+      { name: "description", content: "شاشة نقطة البيع لمقهى باب رزق: اختيار المنتجات، إدارة السلة وإتمام الدفع." },
+      { property: "og:title", content: "باب رزق — نقطة البيع" },
+      { property: "og:description", content: "شاشة نقطة البيع لمقهى باب رزق: اختيار المنتجات، إدارة السلة وإتمام الدفع." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "باب رزق — نقطة البيع" },
+      { name: "twitter:description", content: "شاشة نقطة البيع لمقهى باب رزق: اختيار المنتجات، إدارة السلة وإتمام الدفع." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1f86ad13-9410-4225-8c10-33fea9263008/id-preview-108955fc--5d4a9f41-afac-4502-ba79-78ae7e23d10e.lovable.app-1785668877902.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/1f86ad13-9410-4225-8c10-33fea9263008/id-preview-108955fc--5d4a9f41-afac-4502-ba79-78ae7e23d10e.lovable.app-1785668877902.png" },
     ],
     links: [
       {
