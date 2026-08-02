@@ -11,14 +11,17 @@ const methods = [
 
 export function PaymentDialog({
   grandTotal,
+  busy = false,
   onDismiss,
   onComplete,
 }: {
   grandTotal: number;
+  busy?: boolean;
   onDismiss: () => void;
   onComplete: (method: string) => void;
 }) {
   const [method, setMethod] = useState<string>("CASH");
+
   const [paid, setPaid] = useState<string>(String(grandTotal));
   const change = (Number(paid) || 0) - grandTotal;
 
