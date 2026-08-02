@@ -17,6 +17,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Diagnostic: print environment
+        run: |
+          echo "--- node/npm versions ---"
+          node -v
+          npm -v
+          echo "--- workspace contents ---"
+          ls -la
+          echo "--- package.json ---"
+          cat package.json
+
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
