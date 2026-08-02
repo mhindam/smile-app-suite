@@ -286,6 +286,21 @@ function PosPage() {
             </div>
 
             <div className="space-y-3 p-6">
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="اسمك (اختياري)"
+                  className="rounded-2xl border border-input bg-surface px-4 py-3 text-sm outline-none focus:border-primary"
+                />
+                <input
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  inputMode="tel"
+                  placeholder="رقم الموبايل (اختياري)"
+                  className="rounded-2xl border border-input bg-surface px-4 py-3 text-sm outline-none focus:border-primary"
+                />
+              </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => setCart([])}
@@ -315,15 +330,35 @@ function PosPage() {
       {showPayment && (
         <PaymentDialog
           grandTotal={grandTotal}
+          busy={sending}
           onDismiss={() => setShowPayment(false)}
-          onComplete={() => {
-            setShowPayment(false);
-            setShowCart(false);
-            setCart([]);
-            toast.success("تم إتمام عملية البيع بنجاح");
+          onComplete={async (method) => {
+            if (sending) return;
+            setSending(true);
+            try {
+              const code = await placeOrder({
+                cart,
+                subtotal,
+                total: grandTotal,
+                paymentMethod: method,
+                qrTitle,
+                qrMessage,
+                customerName,
+                customerPhone,
+              });
+              setShowPayment(false);
+              setShowCart(false);
+              setCart([]);
+              toast.success(`تم إرسال الطلب للكاشير — رقم الطلب ${code}`);
+            } catch {
+              toast.error("تعذّر إرسال الطلب، حاول مرة أخرى");
+            } finally {
+              setSending(false);
+            }
           }}
         />
       )}
     </div>
+
   );
 }
