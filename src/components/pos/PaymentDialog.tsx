@@ -88,11 +88,13 @@ export function PaymentDialog({
           </button>
           <button
             onClick={() => onComplete(method)}
-            className="flex flex-[2] items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-base font-bold text-primary-foreground"
+            disabled={busy}
+            className="flex flex-[2] items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-base font-bold text-primary-foreground disabled:opacity-50"
           >
             <CheckCircle2 className="size-5" />
-            تأكيد الدفع
+            {busy ? "جارٍ الإرسال..." : "تأكيد الدفع"}
           </button>
+
         </div>
       </div>
     </div>
