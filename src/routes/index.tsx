@@ -1,24 +1,309 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Coffee, ScanLine, ShoppingCart, Plus, Minus, Trash2, X } from "lucide-react";
+import { toast, Toaster } from "sonner";
+import { categories, products, formatEgp, type CartItem, type Product } from "@/data/menu";
+import { PaymentDialog } from "@/components/pos/PaymentDialog";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "باب رزق — نقطة البيع" },
+      {
+        name: "description",
+        content: "شاشة نقطة البيع لمقهى باب رزق: اختيار المنتجات، إدارة السلة وإتمام الدفع.",
+      },
+      { property: "og:title", content: "باب رزق — نقطة البيع" },
+      {
+        property: "og:description",
+        content: "شاشة نقطة البيع لمقهى باب رزق: اختيار المنتجات، إدارة السلة وإتمام الدفع.",
+      },
+    ],
+  }),
+  component: PosPage,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function PosPage() {
+  const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [showCart, setShowCart] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [clock, setClock] = useState({ date: "", time: "" });
+
+  useEffect(() => {
+    const tick = () => {
+      const d = new Date();
+      setClock({
+        date: `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`,
+        time: d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
+      });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const categoryProducts = useMemo(
+    () => products.filter((p) => p.category === selectedCategory),
+    [selectedCategory],
+  );
+
+  const count = cart.reduce((s, i) => s + i.quantity, 0);
+  const subtotal = cart.reduce((s, i) => s + i.product.price * i.quantity, 0);
+  const discount = 0;
+  const grandTotal = subtotal - discount;
+
+  const addToCart = (product: Product) =>
+    setCart((items) =>
+      items.some((i) => i.product.id === product.id)
+        ? items.map((i) => (i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i))
+        : [...items, { product, quantity: 1 }],
+    );
+
+  const increase = (id: number) =>
+    setCart((items) =>
+      items.map((i) => (i.product.id === id ? { ...i, quantity: i.quantity + 1 } : i)),
+    );
+
+  const decrease = (id: number) =>
+    setCart((items) =>
+      items.flatMap((i) =>
+        i.product.id === id
+          ? i.quantity > 1
+            ? [{ ...i, quantity: i.quantity - 1 }]
+            : []
+          : [i],
+      ),
+    );
+
+  const remove = (id: number) => setCart((items) => items.filter((i) => i.product.id !== id));
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div dir="rtl" className="flex min-h-screen flex-col bg-background text-on-surface">
+      <Toaster position="top-center" richColors />
+
+      {/* Top app bar */}
+      <header className="sticky top-0 z-30 flex items-center justify-between bg-surface px-4 py-3 shadow-card">
+        <div className="flex items-center gap-2">
+          <Coffee className="size-9 text-primary" />
+          <div>
+            <h1 className="text-xl font-bold leading-tight">باب رزق</h1>
+            <p className="text-xs text-on-surface-variant">
+              {clock.date} | {clock.time}
+            </p>
+          </div>
+        </div>
+        <button
+          aria-label="مسح باركود"
+          onClick={() => toast("امسح الباركود من كاميرا الجهاز")}
+          className="rounded-full p-2 text-primary transition-colors hover:bg-primary-container"
+        >
+          <ScanLine className="size-6" />
+        </button>
+      </header>
+
+      {/* Categories row */}
+      <div className="flex gap-2 overflow-x-auto px-4 py-2">
+        {categories.map((cat) => {
+          const active = cat === selectedCategory;
+          return (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`shrink-0 rounded-2xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                active
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-surface text-on-surface hover:bg-surface-variant"
+              }`}
+            >
+              {cat}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Products grid */}
+      <main className="grid flex-1 grid-cols-[repeat(auto-fill,minmax(130px,1fr))] content-start gap-3 p-6">
+        {categoryProducts.map((product) => (
+          <button
+            key={product.id}
+            onClick={() => addToCart(product)}
+            className="overflow-hidden rounded-2xl bg-surface text-right shadow-card transition-transform hover:-translate-y-0.5"
+          >
+            <div className="relative aspect-[1.2] w-full bg-secondary-container">
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                loading="lazy"
+                className="size-full object-cover"
+              />
+              {product.badge && (
+                <span className="absolute right-0 top-0 rounded-bl-2xl rounded-tr-2xl bg-primary px-2 py-1 text-[11px] text-primary-foreground">
+                  {product.badge}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-2 p-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-bold">{product.name}</p>
+                <p className="mt-1 font-bold text-primary">{formatEgp(product.price)}</p>
+              </div>
+              <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                <Plus className="size-5" />
+              </span>
+            </div>
+          </button>
+        ))}
+      </main>
+
+      {/* Cart FAB */}
+      <button
+        onClick={() => setShowCart(true)}
+        aria-label="السلة"
+        className="fixed bottom-6 left-6 z-30 flex size-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-fab"
+      >
+        <ShoppingCart className="size-8" />
+        {count > 0 && (
+          <span className="absolute -top-1.5 left-0 min-w-6 rounded-full bg-destructive px-1.5 py-0.5 text-xs font-bold text-destructive-foreground">
+            {count}
+          </span>
+        )}
+      </button>
+
+      {/* Cart bottom sheet */}
+      {showCart && (
+        <div
+          className="fixed inset-0 z-40 flex items-end bg-foreground/40"
+          onClick={() => setShowCart(false)}
+        >
+          <div
+            className="flex h-[85vh] w-full flex-col rounded-t-3xl bg-surface shadow-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-surface-variant" />
+            <div className="flex items-center justify-between px-6 py-4">
+              <h2 className="text-xl font-bold">سلة المشتريات</h2>
+              <div className="flex items-center gap-2">
+                <span className="rounded-2xl bg-primary-container px-3 py-1 text-xs text-on-primary-container">
+                  {count} عنصر
+                </span>
+                <button
+                  aria-label="إغلاق"
+                  onClick={() => setShowCart(false)}
+                  className="rounded-full p-1 text-on-surface-variant"
+                >
+                  <X className="size-5" />
+                </button>
+              </div>
+            </div>
+            <div className="h-px bg-surface-variant" />
+
+            <div className="flex-1 overflow-y-auto">
+              {cart.length === 0 ? (
+                <p className="p-10 text-center text-on-surface-variant">السلة فارغة</p>
+              ) : (
+                cart.map((item) => (
+                  <div key={item.product.id}>
+                    <div className="flex items-center gap-3 px-6 py-4">
+                      <img
+                        src={item.product.imageUrl}
+                        alt={item.product.name}
+                        className="size-12 rounded-lg bg-secondary-container object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-bold">{item.product.name}</p>
+                        <p className="text-sm text-on-surface-variant">
+                          {formatEgp(item.product.price)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          aria-label="إنقاص"
+                          onClick={() => decrease(item.product.id)}
+                          className="flex size-8 items-center justify-center rounded-lg bg-secondary-container text-on-secondary-container"
+                        >
+                          <Minus className="size-4" />
+                        </button>
+                        <span className="min-w-6 text-center font-bold">{item.quantity}</span>
+                        <button
+                          aria-label="زيادة"
+                          onClick={() => increase(item.product.id)}
+                          className="flex size-8 items-center justify-center rounded-lg bg-primary-container text-on-primary-container"
+                        >
+                          <Plus className="size-4" />
+                        </button>
+                        <span className="w-16 text-left font-bold">
+                          {formatEgp(item.product.price * item.quantity)}
+                        </span>
+                        <button
+                          aria-label="حذف"
+                          onClick={() => remove(item.product.id)}
+                          className="p-1 text-destructive"
+                        >
+                          <Trash2 className="size-5" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="h-px bg-surface-variant" />
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="bg-surface-variant/40 p-6">
+              <div className="flex justify-between">
+                <span>المجموع الفرعي</span>
+                <span>{formatEgp(subtotal)}</span>
+              </div>
+              <div className="mt-1 flex justify-between">
+                <span>الخصم</span>
+                <span>{formatEgp(discount)}</span>
+              </div>
+              <div className="mt-2 flex justify-between text-xl font-bold">
+                <span>الإجمالي</span>
+                <span className="text-primary">{formatEgp(grandTotal)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-3 p-6">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setCart([])}
+                  className="flex-1 rounded-2xl border border-input py-3 text-sm font-semibold text-primary"
+                >
+                  مسح السلة
+                </button>
+                <button
+                  onClick={() => toast("تم تعليق الطلب")}
+                  className="flex-1 rounded-2xl border border-input py-3 text-sm font-semibold text-primary"
+                >
+                  تعليق الطلب
+                </button>
+              </div>
+              <button
+                disabled={cart.length === 0}
+                onClick={() => setShowPayment(true)}
+                className="w-full rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground disabled:opacity-40"
+              >
+                إتمام الدفع
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPayment && (
+        <PaymentDialog
+          grandTotal={grandTotal}
+          onDismiss={() => setShowPayment(false)}
+          onComplete={() => {
+            setShowPayment(false);
+            setShowCart(false);
+            setCart([]);
+            toast.success("تم إتمام عملية البيع بنجاح");
+          }}
+        />
+      )}
     </div>
   );
 }
