@@ -4,8 +4,13 @@ import { Coffee, ScanLine, ShoppingCart, Plus, Minus, Trash2, X } from "lucide-r
 import { toast, Toaster } from "sonner";
 import { categories, products, formatEgp, type CartItem, type Product } from "@/data/menu";
 import { PaymentDialog } from "@/components/pos/PaymentDialog";
+import { placeOrder } from "@/lib/orders";
 
 export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    title: typeof search["title"] === "string" ? search["title"] : undefined,
+    msg: typeof search["msg"] === "string" ? search["msg"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "باب رزق — نقطة البيع" },
@@ -24,11 +29,16 @@ export const Route = createFileRoute("/")({
 });
 
 function PosPage() {
+  const { title: qrTitle, msg: qrMessage } = Route.useSearch();
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [clock, setClock] = useState({ date: "", time: "" });
+
 
   useEffect(() => {
     const tick = () => {
