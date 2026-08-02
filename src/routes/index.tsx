@@ -7,10 +7,11 @@ import { PaymentDialog } from "@/components/pos/PaymentDialog";
 import { placeOrder } from "@/lib/orders";
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    title: typeof search["title"] === "string" ? search["title"] : undefined,
-    msg: typeof search["msg"] === "string" ? search["msg"] : undefined,
+  validateSearch: (search: Record<string, unknown>): { title?: string; msg?: string } => ({
+    ...(typeof search["title"] === "string" ? { title: search["title"] } : {}),
+    ...(typeof search["msg"] === "string" ? { msg: search["msg"] } : {}),
   }),
+
   head: () => ({
     meta: [
       { title: "باب رزق — نقطة البيع" },
