@@ -6,11 +6,11 @@ export type PlaceOrderInput = {
   subtotal: number;
   total: number;
   paymentMethod: string;
-  qrTitle?: string;
-  qrMessage?: string;
-  customerName?: string;
-  customerPhone?: string;
-  note?: string;
+  qrTitle?: string | undefined;
+  qrMessage?: string | undefined;
+  customerName?: string | undefined;
+  customerPhone?: string | undefined;
+  note?: string | undefined;
 };
 
 export function makeOrderCode() {
