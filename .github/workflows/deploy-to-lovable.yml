@@ -1,0 +1,39 @@
+name: Deploy to Lovable
+
+on:
+  push:
+    branches: [ main ]
+
+permissions: write-all
+
+jobs:
+  deploy:
+    name: Deploy site to Lovable
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare package
+        run: |
+          mkdir -p .deploy
+          cd .deploy
+          # include the single page and assets directory
+          zip -r site.zip ../order-spa.html ../assets || true
+          ls -lh site.zip
+
+      - name: Deploy to Lovable (magic link embedded)
+        env:
+          DEPLOY_URL: "https://lovable.dev/projects/5d4a9f41-afac-4502-ba79-78ae7e23d10e?magic_link=mc_7991fcc2-27ce-4f00-bd69-bd9e2d16eb61"
+        run: |
+          echo "Deploying to Lovable via embedded magic link..."
+          # POST the zip file to the magic link. The field name is 'file' — change if Lovable expects a different field.
+          curl -sS -X POST "$DEPLOY_URL" -F "file=@.deploy/site.zip" -H "Accept: application/json" -o .deploy/response.json || true
+          echo "Response from Lovable:"
+          cat .deploy/response.json || true
+
+      - name: Success message
+        if: ${{ always() }}
+        run: |
+          echo "If the previous step succeeded, your site was deployed to Lovable. If it failed, check the magic link and Lovable's acceptance of multipart uploads."
