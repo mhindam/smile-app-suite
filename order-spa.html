@@ -11,7 +11,10 @@
   <div class="app" id="app">
     <header class="app-header">
       <div>
-        <div class="store-name">مطعم الابتسامة</div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div class="store-name">مطعم الابتسامة</div>
+          <button id="openTrackBtn" class="qty-btn" title="تتبع الطلبات" aria-label="تتبع الطلبات">تتبع الطلبات</button>
+        </div>
         <div class="tagline">الطلب الخارجي - خدمة سريعة وأنيقة</div>
       </div>
       <div class="muted">ساعات العمل: 9ص - 12م</div>
@@ -33,7 +36,7 @@
       </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Checkout Modal -->
     <div class="overlay" id="overlay" aria-hidden="true">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
         <div class="content">
@@ -84,6 +87,32 @@
             <button class="confirm-btn" id="confirmOrderBtn" disabled>تأكيد الطلب</button>
             <button class="qty-btn" id="closeModal">إلغاء</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Track Modal -->
+    <div class="overlay" id="trackOverlay" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="trackTitle">
+        <div class="content">
+          <h3 id="trackTitle">تتبع الطلب</h3>
+          <div class="form-row">
+            <input type="text" id="trackInput" placeholder="أدخل رقم الطلب (مثال: #ORD-12345)" aria-label="رقم الطلب" />
+            <div style="display:flex;gap:8px">
+              <button id="trackBtn" class="confirm-btn">تتبع</button>
+              <button id="closeTrackBtn" class="qty-btn">إغلاق</button>
+            </div>
+          </div>
+
+          <div id="trackResult" style="margin-top:12px;display:none;flex-direction:column;gap:10px">
+            <div class="muted">ملاحظة: لأسباب تتعلق بالخصوصية، نعرض فقط وقت الطلب، رقم الطلب، وحالة الطلب الحالية.</div>
+            <div style="background:var(--card);padding:12px;border-radius:10px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px">
+              <div><strong>رقم الطلب:</strong> <span id="trkId"></span></div>
+              <div><strong>وقت الطلب:</strong> <span id="trkTime"></span></div>
+              <div><strong>حالة الطلب:</strong> <span id="trkStatus" style="color:var(--primary);font-weight:800"></span></div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
