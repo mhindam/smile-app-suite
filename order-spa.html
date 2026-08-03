@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>نظام الطلبات الخارجي - متجر تجريبي</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f7f9fb;
+      --card:#ffffff;
+      --muted:#7b8a93;
+      --primary:#06b6a4; /* teal */
+      --accent:#ff7a45; /* orange for highlights if needed */
+      --shadow: 0 6px 18px rgba(9,30,66,0.08);
+      --radius:14px;
+      --glass: rgba(255,255,255,0.6);
+      --danger:#ef4444;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family: 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      background:var(--bg);
+      color:#0f1724;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      direction:rtl;
+      text-align:right;
+      display:flex;
+      justify-content:center;
+      padding:20px 12px;
+      box-sizing:border-box;
+    }
+    .app{
+      width:100%;
+      max-width:980px;
+      position:relative;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+    header.app-header{
+      background:linear-gradient(90deg,var(--card),#f1f6f5);
+      border-radius:var(--radius);
+      padding:16px 18px;
+      box-shadow:var(--shadow);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .store-name{
+      font-size:20px;
+      font-weight:700;
+      color:#063945;
+    }
+    .tagline{font-size:13px;color:var(--muted);}
+
+    /* categories */
+    .categories{
+      display:flex;
+      gap:10px;
+      overflow-x:auto;
+      padding:8px 4px;
+      scrollbar-width:none;
+    }
+    .categories::-webkit-scrollbar{display:none}
+    .cat{
+      background:var(--card);
+      border-radius:999px;
+      padding:8px 14px;
+      box-shadow:0 6px 14px rgba(9,30,66,0.06);
+      white-space:nowrap;
+      cursor:pointer;
+      font-weight:600;
+      color:#0f1724;
+      transform:translateZ(0);
+      transition:transform .16s ease, box-shadow .16s ease;
+    }
+    .cat:active{transform:scale(.98)}
+    .cat.active{background:linear-gradient(90deg,var(--primary),#05a28f); color:white; box-shadow:0 8px 20px rgba(6,182,164,0.18)}
+
+    /* product grid */
+    main.grid{
+      display:grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap:12px;
+      align-items:start;
+    }
+    @media(min-width:780px){
+      main.grid{grid-template-columns: repeat(3, 1fr);}    
+    }
+    .product{
+      background:var(--card);
+      border-radius:12px;
+      padding:12px;
+      box-shadow:var(--shadow);
+      display:flex;
+      gap:12px;
+      align-items:center;
+      cursor:pointer;
+      transition:transform .12s ease, box-shadow .12s ease;
+    }
+    .product:active{transform:scale(.995)}
+    .product .img{
+      width:82px;height:82px;border-radius:10px;flex-shrink:0;overflow:hidden;background:linear-gradient(135deg,#e6fffb,#f1f6f5);display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:700;font-size:12px;border:1px solid rgba(9,30,66,0.03)
+    }
+    .product .meta{flex:1;display:flex;flex-direction:column}
+    .product .title{font-weight:700;font-size:15px;margin-bottom:6px}
+    .product .price{color:var(--primary);font-weight:700}
+
+    /* floating cart */
+    .cart-bar{
+      position:fixed;left:0;right:0;bottom:14px;margin:auto;max-width:980px;padding:12px 16px;background:var(--card);border-radius:999px;box-shadow:0 20px 40px rgba(6,24,30,0.12);display:flex;align-items:center;justify-content:space-between;gap:12px;transform:translateY(150%);transition:transform .32s cubic-bezier(.22,1,.36,1);z-index:40;margin-inline:12px
+    }
+    .cart-bar.visible{transform:translateY(0)}
+    .cart-summary{display:flex;gap:12px;align-items:center}
+    .cart-total{font-weight:800;font-size:16px}
+    .checkout-btn{background:var(--primary);color:white;padding:10px 16px;border-radius:12px;border:none;font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(6,182,164,0.18);}
+
+    /* modal */
+    .overlay{position:fixed;inset:0;background:rgba(3,7,18,0.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:60}
+    .overlay.open{display:flex}
+    .modal{background:linear-gradient(180deg,var(--card),#fcffff);border-radius:16px;max-width:760px;width:100%;box-shadow:0 30px 60px rgba(9,30,66,0.2);overflow:hidden;transform:translateY(20px);opacity:0;transition:opacity .18s ease, transform .22s cubic-bezier(.2,.9,.3,1)}
+    .overlay.open .modal{transform:translateY(0);opacity:1}
+    .modal .content{padding:18px;display:flex;gap:12px;flex-direction:column}
+    .modal h3{margin:0 0 6px 0}
+    .items-list{display:flex;flex-direction:column;gap:10px;max-height:250px;overflow:auto;padding-right:6px}
+    .cart-item{display:flex;justify-content:space-between;align-items:center;background:rgba(6,182,164,0.04);padding:8px 10px;border-radius:10px}
+    .qty-controls{display:flex;align-items:center;gap:8px}
+    .qty-btn{background:white;padding:6px 9px;border-radius:8px;border:1px solid rgba(9,30,66,0.06);cursor:pointer}
+
+    .form-row{display:flex;gap:8px;flex-direction:column}
+    .form-row input[type="text"], .form-row input[type="tel"], textarea{
+      width:100%;padding:10px;border-radius:10px;border:1px solid rgba(9,30,66,0.06);font-size:15px
+    }
+    .payment-methods{display:flex;flex-direction:column;gap:8px}
+    .payment-option{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;border:1px solid rgba(9,30,66,0.04);cursor:pointer;background:linear-gradient(180deg,rgba(255,255,255,0.6),rgba(255,255,255,0.9))}
+    .payment-option.active{border-color:rgba(6,182,164,0.18);box-shadow:0 8px 20px rgba(6,182,164,0.06)}
+
+    .payment-details{background:linear-gradient(90deg,#f8fff9,#ffffff);padding:10px;border-radius:10px;border:1px dashed rgba(6,182,164,0.08)}
+
+    .modal-footer{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:12px;border-top:1px solid rgba(9,30,66,0.03)}
+    .confirm-btn{background:var(--primary);color:white;padding:10px 14px;border-radius:12px;border:none;font-weight:800;cursor:pointer}
+    .confirm-btn[disabled]{opacity:.5;cursor:not-allowed}
+
+    /* success view */
+    .success-view{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:80;background:linear-gradient(180deg,#f2fffb,#eafdf9)}
+    .success-view.show{display:flex}
+    .success-card{background:white;padding:28px;border-radius:18px;box-shadow:0 30px 60px rgba(6,24,30,0.12);display:flex;flex-direction:column;align-items:center;gap:18px;max-width:720px;width:100%}
+    .checkmark{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(90deg,var(--primary),#05a28f);box-shadow:0 12px 30px rgba(6,182,164,0.18);transform:scale(.8);opacity:0;animation:pop .5s .12s forwards}
+    @keyframes pop{to{transform:scale(1);opacity:1}}
+    .checkmark svg{width:52px;height:52px;fill:none;stroke:white;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
+    .success-title{font-size:20px;font-weight:800}
+    .order-id{font-size:44px;font-weight:900;color:var(--primary)}
+
+    /* small utilities */
+    .muted{color:var(--muted);font-size:13px}
+    .flex{display:flex}
+    .gap{gap:8px}
+
+    /* nice transitions */
+    .fade-in{animation:fadeIn .22s ease both}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+    /* file input styling */
+    .file-input{display:flex;gap:10px;align-items:center}
+    .file-input input[type=file]{display:none}
+    .file-label{padding:8px 10px;border-radius:10px;background:var(--card);border:1px dashed rgba(9,30,66,0.04);cursor:pointer}
+
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="app-header">
+      <div>
+        <div class="store-name">مطعم الابتسامة</div>
+        <div class="tagline">الطلب الخارجي - خدمة سريعة وأنيقة</div>
+      </div>
+      <div class="muted">ساعات العمل: 9ص - 12م</div>
+    </header>
+
+    <nav class="categories" id="categories"></nav>
+
+    <main class="grid" id="products"></main>
+
+    <div class="cart-bar" id="cartBar" aria-hidden="true">
+      <div class="cart-summary">
+        <div style="text-align:right">
+          <div class="cart-total" id="cartTotal">0 ر.س</div>
+          <div class="muted" id="cartCount">0 عنصر</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <button class="checkout-btn" id="openCheckout">إتمام الطلب</button>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="overlay" id="overlay" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="content">
+          <h3>مراجعة السلة</h3>
+          <div class="items-list" id="itemsList"></div>
+
+          <h3>تفاصيل العميل</h3>
+          <div class="form-row">
+            <input type="text" id="inputName" placeholder="الاسم" required />
+            <input type="tel" id="inputPhone" placeholder="رقم الهاتف" required />
+            <textarea id="inputAddress" rows="2" placeholder="العنوان" required></textarea>
+          </div>
+
+          <h3>طريقة الدفع</h3>
+          <div class="payment-methods" id="paymentMethods">
+            <div class="payment-option" data-method="cod">
+              <input type="radio" name="pay" id="payCod" checked />
+              <label for="payCod">الدفع عند الاستلام</label>
+            </div>
+            <div class="payment-option" data-method="now">
+              <input type="radio" name="pay" id="payNow" />
+              <label for="payNow">الدفع الآن</label>
+            </div>
+          </div>
+
+          <div id="payNowFlow" style="display:none;flex-direction:column;gap:8px">
+            <div style="display:flex;gap:8px">
+              <button class="payment-sub" data-sub="insta" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(9,30,66,0.05);cursor:pointer">انستا</button>
+              <button class="payment-sub" data-sub="wallet" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(9,30,66,0.05);cursor:pointer">المحفظة</button>
+            </div>
+            <div id="paymentDetails" style="display:none" class="payment-details"></div>
+            <div style="display:flex;gap:8px;align-items:center;" id="paidSection" hidden>
+              <button id="iPaidBtn" class="confirm-btn" style="background:#0ea5a0">تم الدفع</button>
+            </div>
+            <div id="receiptUpload" style="display:none;flex-direction:column;gap:8px">
+              <div class="file-input">
+                <label class="file-label" for="receiptInput">إرفاق إيصال الدفع</label>
+                <input type="file" id="receiptInput" accept="image/*" />
+                <span id="receiptName" class="muted"></span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <div class="muted">المبلغ الكلي: <strong id="modalTotal">0 ر.س</strong></div>
+          <div style="display:flex;gap:8px">
+            <button class="confirm-btn" id="confirmOrderBtn" disabled>تأكيد الطلب</button>
+            <button class="qty-btn" id="closeModal">إلغاء</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success View -->
+    <div class="success-view" id="successView">
+      <div class="success-card">
+        <div class="checkmark" aria-hidden="true">
+          <svg viewBox="0 0 52 52">
+            <path d="M14 27l7 7 17-17" stroke-dasharray="50" stroke-dashoffset="50" style="animation:dash .6s .2s forwards linear"></path>
+          </svg>
+        </div>
+        <div class="success-title">تم استلام طلبك بنجاح!</div>
+        <div class="muted">يمكنك أخذ لقطة شاشة لرقم الطلب التالي لتتبعه</div>
+        <div class="order-id" id="orderId">#ORD-12345</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Sample data
+    const CATEGORIES = [
+      {id:'all', name:'الكل'},
+      {id:'drinks', name:'مشروبات'},
+      {id:'meals', name:'مأكولات'},
+      {id:'sweets', name:'حلويات'},
+    ];
+
+    const PRODUCTS = [
+      {id:1, cat:'drinks', name:'قهوة اسبريسو', price:12},
+      {id:2, cat:'drinks', name:'شاي نعناع', price:8},
+      {id:3, cat:'meals', name:'برجر لحم', price:35},
+      {id:4, cat:'meals', name:'سلطة سيزر', price:22},
+      {id:5, cat:'sweets', name:'تشيز كيك', price:18},
+      {id:6, cat:'sweets', name:'آيس كريم', price:10},
+      {id:7, cat:'drinks', name:'عصير برتقال', price:14},
+      {id:8, cat:'meals', name:'بيتزا مارجريتا', price:45},
+    ];
+
+    // App state
+    const state = {
+      category: 'all',
+      cart: {}, // productId -> qty
+      payment: {method: 'cod', sub:null, paid:false, receipt:null},
+    };
+
+    // Elements
+    const categoriesEl = document.getElementById('categories');
+    const productsEl = document.getElementById('products');
+    const cartBar = document.getElementById('cartBar');
+    const cartTotalEl = document.getElementById('cartTotal');
+    const cartCountEl = document.getElementById('cartCount');
+    const openCheckoutBtn = document.getElementById('openCheckout');
+    const overlay = document.getElementById('overlay');
+    const itemsList = document.getElementById('itemsList');
+    const modalTotal = document.getElementById('modalTotal');
+    const confirmOrderBtn = document.getElementById('confirmOrderBtn');
+    const closeModalBtn = document.getElementById('closeModal');
+    const inputName = document.getElementById('inputName');
+    const inputPhone = document.getElementById('inputPhone');
+    const inputAddress = document.getElementById('inputAddress');
+    const paymentMethods = document.getElementById('paymentMethods');
+    const payNowFlow = document.getElementById('payNowFlow');
+    const paymentDetails = document.getElementById('paymentDetails');
+    const paidSection = document.getElementById('paidSection');
+    const iPaidBtn = document.getElementById('iPaidBtn');
+    const receiptUpload = document.getElementById('receiptUpload');
+    const receiptInput = document.getElementById('receiptInput');
+    const receiptName = document.getElementById('receiptName');
+    const paymentSubBtns = document.querySelectorAll('.payment-sub');
+    const successView = document.getElementById('successView');
+    const orderIdEl = document.getElementById('orderId');
+
+    // Helpers
+    const money = v => v + ' ر.س';
+
+    function renderCategories(){
+      categoriesEl.innerHTML = '';
+      CATEGORIES.forEach(cat=>{
+        const el = document.createElement('div');
+        el.className = 'cat' + (state.category===cat.id? ' active':'');
+        el.textContent = cat.name;
+        el.onclick = ()=>{ state.category = cat.id; renderCategories(); renderProducts(); }
+        categoriesEl.appendChild(el);
+      })
+    }
+
+    function renderProducts(){
+      productsEl.innerHTML = '';
+      const items = PRODUCTS.filter(p=> state.category==='all' ? true: p.cat===state.category);
+      items.forEach(p=>{
+        const card = document.createElement('div');
+        card.className='product';
+        card.onclick = ()=>{ addToCart(p.id); }
+        card.innerHTML = `
+          <div class="img">صورة</div>
+          <div class="meta">
+            <div class="title">${p.name}</div>
+            <div class="price">${money(p.price)}</div>
+          </div>
+        `;
+        productsEl.appendChild(card);
+      })
+    }
+
+    function addToCart(productId){
+      state.cart[productId] = (state.cart[productId]||0) + 1;
+      updateCartUI();
+      // show cart bar if hidden
+      if(!cartBar.classList.contains('visible')){
+        cartBar.classList.add('visible');
+        cartBar.setAttribute('aria-hidden','false');
+      }
+    }
+
+    function updateCartUI(){
+      const entries = Object.entries(state.cart).filter(([k,v])=>v>0);
+      const count = entries.reduce((s,[k,v])=> s+v,0);
+      const total = entries.reduce((s,[k,v])=> {
+        const prod = PRODUCTS.find(p=>p.id==k);
+        return s + prod.price * v;
+      },0);
+      cartCountEl.textContent = count + ' عنصر';
+      cartTotalEl.textContent = money(total);
+      modalTotal.textContent = money(total);
+      // show/hide cart bar
+      if(count>0){
+        cartBar.classList.add('visible'); cartBar.setAttribute('aria-hidden','false');
+      }else{ cartBar.classList.remove('visible'); cartBar.setAttribute('aria-hidden','true'); }
+    }
+
+    // Open checkout
+    openCheckoutBtn.onclick = ()=>{ openModal(); }
+    function openModal(){
+      renderItemsList();
+      overlay.classList.add('open');
+      overlay.setAttribute('aria-hidden','false');
+      // reset payment flow state
+      state.payment.method = document.querySelector('#payCod').checked ? 'cod' : 'now';
+      renderPaymentUI();
+      validateConfirmState();
+    }
+    closeModalBtn.onclick = ()=>{ overlay.classList.remove('open'); overlay.setAttribute('aria-hidden','true'); }
+
+    function renderItemsList(){
+      itemsList.innerHTML = '';
+      const entries = Object.entries(state.cart).filter(([k,v])=>v>0);
+      if(entries.length===0){
+        itemsList.innerHTML = '<div class="muted">السلة فارغة</div>';
+        return;
+      }
+      entries.forEach(([id,qty])=>{
+        const prod = PRODUCTS.find(p=>p.id==id);
+        const el = document.createElement('div');
+        el.className='cart-item';
+        el.innerHTML = `
+          <div style="text-align:right">
+            <div style="font-weight:800">${prod.name}</div>
+            <div class="muted">${money(prod.price)} لكل وحدة</div>
+          </div>
+          <div class="qty-controls">
+            <button class="qty-btn" data-act="dec" data-id="${id}">-</button>
+            <div style="min-width:34px;text-align:center">${qty}</div>
+            <button class="qty-btn" data-act="inc" data-id="${id}">+</button>
+          </div>
+        `;
+        itemsList.appendChild(el);
+      })
+      // attach handlers
+      itemsList.querySelectorAll('.qty-btn').forEach(btn=>{
+        btn.onclick = (e)=>{
+          const act = btn.dataset.act;
+          const id = btn.dataset.id;
+          if(act==='inc'){ state.cart[id] = (state.cart[id]||0)+1 }
+          else{ state.cart[id] = Math.max(0,(state.cart[id]||0)-1); }
+          if(state.cart[id]===0) delete state.cart[id];
+          renderItemsList(); updateCartUI(); validateConfirmState();
+        }
+      })
+    }
+
+    // Payment selection
+    paymentMethods.addEventListener('click', (e)=>{
+      const opt = e.target.closest('.payment-option');
+      if(!opt) return;
+      const method = opt.dataset.method;
+      state.payment.method = method;
+      // toggle visuals
+      paymentMethods.querySelectorAll('.payment-option').forEach(o=>o.classList.toggle('active', o.dataset.method===method));
+      renderPaymentUI();
+      validateConfirmState();
+    });
+
+    function renderPaymentUI(){
+      if(state.payment.method==='now'){
+        payNowFlow.style.display='flex';
+      }else{
+        payNowFlow.style.display='none';
+        paymentDetails.style.display='none';
+        paidSection.hidden = true;
+        receiptUpload.style.display='none';
+        state.payment.sub = null; state.payment.paid=false; state.payment.receipt=null;
+        receiptName.textContent='';
+      }
+    }
+
+    paymentSubBtns.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        paymentSubBtns.forEach(b=>b.classList.toggle('active', b===btn));
+        state.payment.sub = btn.dataset.sub;
+        paymentDetails.style.display='block';
+        paidSection.hidden = false;
+        receiptUpload.style.display='none';
+        state.payment.paid = false; state.payment.receipt = null;
+        receiptName.textContent='';
+        if(state.payment.sub==='insta'){
+          paymentDetails.textContent = 'يرجى التحويل إلى انستا: store_insta_account';
+        }else{
+          paymentDetails.textContent = 'يرجى التحويل إلى المحفظة: 010XXXXXXX';
+        }
+        validateConfirmState();
+      })
+    })
+
+    iPaidBtn.addEventListener('click', ()=>{
+      // reveal file upload
+      receiptUpload.style.display='flex';
+      // mark as paid step initiated
+      state.payment.paid = false;
+      validateConfirmState();
+    });
+
+    receiptInput.addEventListener('change', async (e)=>{
+      const file = e.target.files[0];
+      if(!file) return;
+      receiptName.textContent = file.name;
+      // read as base64
+      const data = await readFileAsDataURL(file);
+      state.payment.receipt = {name:file.name, data};
+      state.payment.paid = true;
+      validateConfirmState();
+    })
+
+    function readFileAsDataURL(file){
+      return new Promise((res,rej)=>{
+        const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror=rej; r.readAsDataURL(file);
+      })
+    }
+
+    function validateConfirmState(){
+      // must have required fields
+      const nameOk = inputName.value.trim().length>0;
+      const phoneOk = inputPhone.value.trim().length>0;
+      const addrOk = inputAddress.value.trim().length>0;
+      const cartNotEmpty = Object.keys(state.cart).length>0;
+      let paymentOk = true;
+      if(state.payment.method==='now'){
+        if(!state.payment.sub) paymentOk=false;
+        if(!state.payment.paid) paymentOk=false;
+      }
+      const enabled = cartNotEmpty && nameOk && phoneOk && addrOk && paymentOk;
+      confirmOrderBtn.disabled = !enabled;
+    }
+
+    // wire inputs to validation
+    [inputName,inputPhone,inputAddress].forEach(i=>i.addEventListener('input', validateConfirmState));
+
+    confirmOrderBtn.addEventListener('click', async ()=>{
+      // final validation
+      if(confirmOrderBtn.disabled) return;
+      // prepare payload
+      const items = Object.entries(state.cart).map(([id,qty])=>{
+        const prod = PRODUCTS.find(p=>p.id==id);
+        return {id:prod.id,name:prod.name,unitPrice:prod.price,qty,subtotal:prod.price*qty};
+      });
+      const totalAmount = items.reduce((s,i)=>s+i.subtotal,0);
+      const payload = {
+        customer: {name: inputName.value.trim(), phone: inputPhone.value.trim(), address: inputAddress.value.trim()},
+        items, total: totalAmount,
+        payment: {method: state.payment.method, sub: state.payment.sub, receipt: state.payment.receipt ? {name: state.payment.receipt.name} : null}
+      };
+      // simulate POST
+      confirmOrderBtn.disabled = true;
+      confirmOrderBtn.textContent = 'جارٍ الإرسال...';
+      try{
+        const res = await fakePost('/api/orders', payload);
+        // success
+        showSuccess(res.orderId);
+        // reset state
+        state.cart = {}; state.payment = {method:'cod', sub:null, paid:false, receipt:null};
+        inputName.value=''; inputPhone.value=''; inputAddress.value=''; receiptName.textContent='';
+        updateCartUI();
+        overlay.classList.remove('open'); overlay.setAttribute('aria-hidden','true');
+      }catch(err){
+        alert('حدث خطأ أثناء إرسال الطلب. حاول مرة أخرى.');
+        console.error(err);
+      }finally{
+        confirmOrderBtn.disabled = false;
+        confirmOrderBtn.textContent = 'تأكيد الطلب';
+      }
+    })
+
+    function fakePost(url, payload){
+      // This simulates sending the order to a local server. In a real app, replace with fetch(url...)
+      return new Promise((resolve)=>{
+        console.log('POST',url,payload);
+        setTimeout(()=>{
+          const id = '#ORD-' + Math.floor(Math.random()*90000 + 10000);
+          resolve({ok:true, orderId:id});
+        },1200);
+      })
+    }
+
+    function showSuccess(id){
+      // hide main UI
+      document.querySelector('header.app-header').style.display='none';
+      document.getElementById('categories').style.display='none';
+      document.getElementById('products').style.display='none';
+      cartBar.style.display='none';
+      successView.classList.add('show');
+      orderIdEl.textContent = id;
+    }
+
+    // init
+    renderCategories(); renderProducts(); updateCartUI();
+
+    // small animation dash
+    const style = document.createElement('style');
+    style.textContent = `@keyframes dash{to{stroke-dashoffset:0}}`;
+    document.head.appendChild(style);
+
+    // allow clicking outside modal to close
+    overlay.addEventListener('click', (e)=>{ if(e.target===overlay){ overlay.classList.remove('open'); overlay.setAttribute('aria-hidden','true'); } });
+
+    // quick accessibility: Enter key on confirm
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && overlay.classList.contains('open')){ if(!confirmOrderBtn.disabled) confirmOrderBtn.click(); } })
+
+  </script>
+</body>
+</html>
