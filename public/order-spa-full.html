@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>نظام الطلبات الخارجي</title>
+  <title>نظام الطلبات الخارجي - متجر تجريبي</title>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
   <style>
 /* order-spa.css - extracted styles for order-spa.html */
@@ -73,7 +73,7 @@ main.grid{display:grid;grid-template-columns: repeat(2, 1fr);gap:12px;align-item
 .checkout-btn{background:var(--primary);color:white;padding:10px 16px;border-radius:12px;border:none;font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(6,182,164,0.18)}
 .overlay{position:fixed;inset:0;background:rgba(3,7,18,0.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:60}
 .overlay.open{display:flex}
-.modal{background:linear-gradient(180deg,var(--card),#fcffff);border-radius:16px;max-width:760px;width:100%;box-shadow:0 30px 60px rgba(9,30,66,0.2);overflow:hidden;transform:translateY(20px);opacity:0;transition:opacity .18s ease, transform .22s cubic-bezier(.2,.9,.3,1)}
+.modal{background:linear-gradient(180deg,var(--card),#fcffff);border-radius:16px;max-width:760px;width:100%;box-shadow:0 30px 60px rgba(9,30,66,0.2);overflow:hidden;transform:translateY(20px);opacity:0;transition:opacity .18s ease, transform .22s cubic-bezier(.2,.9,.3,1);display:flex;flex-direction:column;}
 .overlay.open .modal{transform:translateY(0);opacity:1}
 .modal .content{padding:18px;display:flex;gap:12px;flex-direction:column}
 .modal h3{margin:0 0 6px 0}
@@ -82,13 +82,14 @@ main.grid{display:grid;grid-template-columns: repeat(2, 1fr);gap:12px;align-item
 .qty-controls{display:flex;align-items:center;gap:8px}
 .qty-btn{background:white;padding:6px 9px;border-radius:8px;border:1px solid rgba(9,30,66,0.06);cursor:pointer}
 .form-row{display:flex;gap:8px;flex-direction:column}
-.form-row input[type="text"], .form-row input[type="tel"], textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(9,30,66,0.06);font-size:15px}
+.form-row input[type="text"], .form-row input[type="tel"], textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(9,30,66,0.06);font-size:15px;font-family:inherit;}
 .payment-methods{display:flex;flex-direction:column;gap:8px}
 .payment-option{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;border:1px solid rgba(9,30,66,0.04);cursor:pointer;background:linear-gradient(180deg,rgba(255,255,255,0.6),rgba(255,255,255,0.9))}
 .payment-option.active{border-color:rgba(6,182,164,0.18);box-shadow:0 8px 20px rgba(6,182,164,0.06)}
-.payment-details{background:linear-gradient(90deg,#f8fff9,#ffffff);padding:10px;border-radius:10px;border:1px dashed rgba(6,182,164,0.08)}
+.payment-option input[type="radio"] { accent-color: var(--primary); transform: scale(1.2); }
+.payment-details{background:linear-gradient(90deg,#f8fff9,#ffffff);padding:15px;border-radius:10px;border:1px dashed rgba(6,182,164,0.3);margin-top:8px;}
 .modal-footer{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:12px;border-top:1px solid rgba(9,30,66,0.03)}
-.confirm-btn{background:var(--primary);color:white;padding:10px 14px;border-radius:12px;border:none;font-weight:800;cursor:pointer}
+.confirm-btn{background:var(--primary);color:white;padding:10px 14px;border-radius:12px;border:none;font-weight:800;cursor:pointer;font-family:inherit;}
 .confirm-btn[disabled]{opacity:.5;cursor:not-allowed}
 .success-view{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:80;background:linear-gradient(180deg,#f2fffb,#eafdf9)}
 .success-view.show{display:flex}
@@ -103,7 +104,8 @@ main.grid{display:grid;grid-template-columns: repeat(2, 1fr);gap:12px;align-item
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .file-input{display:flex;gap:10px;align-items:center}
 .file-input input[type=file]{display:none}
-.file-label{padding:8px 10px;border-radius:10px;background:var(--card);border:1px dashed rgba(9,30,66,0.04);cursor:pointer}
+.file-label{padding:8px 10px;border-radius:10px;background:var(--card);border:1px dashed rgba(9,30,66,0.2);cursor:pointer;font-size:0.9rem;font-weight:600;color:var(--primary);}
+.loading{text-align:center;padding:2rem;color:var(--muted);font-weight:600;grid-column:1/-1;}
 /* small responsiveness */
 @media(min-width:980px){body{padding:36px}}
 </style>
@@ -123,7 +125,9 @@ main.grid{display:grid;grid-template-columns: repeat(2, 1fr);gap:12px;align-item
 
     <nav class="categories" id="categories" aria-label="أقسام القائمة"></nav>
 
-    <main class="grid" id="products" aria-live="polite"></main>
+    <main class="grid" id="products" aria-live="polite">
+        <div class="loading">جاري تحميل القائمة...</div>
+    </main>
 
     <div class="cart-bar" id="cartBar" aria-hidden="true">
       <div class="cart-summary">
@@ -140,55 +144,81 @@ main.grid{display:grid;grid-template-columns: repeat(2, 1fr);gap:12px;align-item
     <!-- Checkout Modal -->
     <div class="overlay" id="overlay" aria-hidden="true">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
-        <div class="content">
-          <h3 id="checkoutTitle">مراجعة السلة</h3>
-          <div class="items-list" id="itemsList"></div>
+        
+        <!-- Step 1: Cart and Info -->
+        <div id="checkoutStep1">
+            <div class="content">
+              <h3 id="checkoutTitle">مراجعة السلة</h3>
+              <div class="items-list" id="itemsList"></div>
 
-          <h3>تفاصيل العميل</h3>
-          <div class="form-row">
-            <input type="text" id="inputName" placeholder="الاسم" required aria-required="true" />
-            <input type="tel" id="inputPhone" placeholder="رقم الهاتف" required aria-required="true" />
-            <textarea id="inputAddress" rows="2" placeholder="العنوان" required aria-required="true"></textarea>
-          </div>
-
-          <h3>طريقة الدفع</h3>
-          <div class="payment-methods" id="paymentMethods" role="radiogroup" aria-label="طريقة الدفع">
-            <div class="payment-option" data-method="cod" role="radio" aria-checked="true" tabindex="0">
-              <input type="radio" name="pay" id="payCod" checked />
-              <label for="payCod">الدفع عند الاستلام</label>
-            </div>
-            <div class="payment-option" data-method="now" role="radio" aria-checked="false" tabindex="0">
-              <input type="radio" name="pay" id="payNow" />
-              <label for="payNow">الدفع الآن</label>
-            </div>
-          </div>
-
-          <div id="payNowFlow" style="display:none;flex-direction:column;gap:8px">
-            <div style="display:flex;gap:8px">
-              <button class="payment-sub" data-sub="insta" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(9,30,66,0.05);cursor:pointer">انستا</button>
-              <button class="payment-sub" data-sub="wallet" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(9,30,66,0.05);cursor:pointer">المحفظة</button>
-            </div>
-            <div id="paymentDetails" style="display:none" class="payment-details" aria-live="polite"></div>
-            <div style="display:flex;gap:8px;align-items:center;" id="paidSection" hidden>
-              <button id="iPaidBtn" class="confirm-btn" style="background:#0ea5a0">تم الدفع</button>
-            </div>
-            <div id="receiptUpload" style="display:none;flex-direction:column;gap:8px">
-              <div class="file-input">
-                <label class="file-label" for="receiptInput">إرفاق إيصال الدفع</label>
-                <input type="file" id="receiptInput" accept="image/*" />
-                <span id="receiptName" class="muted"></span>
+              <h3>تفاصيل العميل</h3>
+              <div class="form-row">
+                <input type="text" id="inputName" placeholder="الاسم" required aria-required="true" />
+                <input type="tel" id="inputPhone" placeholder="رقم الهاتف" required aria-required="true" />
+                <textarea id="inputAddress" rows="2" placeholder="العنوان / ملاحظات" style="display:none;"></textarea>
               </div>
             </div>
-          </div>
+            <div class="modal-footer">
+              <div class="muted">الإجمالي: <strong id="modalTotal">0 ج.م</strong></div>
+              <div style="display:flex;gap:8px">
+                <button class="confirm-btn" id="continueToPaymentBtn" disabled>متابعة الدفع</button>
+                <button class="qty-btn" id="closeModal">إلغاء</button>
+              </div>
+            </div>
+        </div>
 
+        <!-- Step 2: Payment Method -->
+        <div id="checkoutStep2" style="display:none;">
+            <div class="content">
+              <h3>طريقة الدفع</h3>
+              <div class="payment-methods" id="paymentMethods" role="radiogroup" aria-label="طريقة الدفع">
+                <div class="payment-option active" data-method="PAY_ON_DELIVERY" role="radio" aria-checked="true" tabindex="0">
+                  <input type="radio" name="pay" id="payCod" checked />
+                  <label for="payCod" style="flex:1;cursor:pointer;font-weight:600;">الدفع عند الاستلام</label>
+                </div>
+                
+                <div class="payment-option" data-method="INSTAPAY" role="radio" aria-checked="false" tabindex="0" id="optInsta" style="display:none;">
+                  <input type="radio" name="pay" id="payInsta" />
+                  <label for="payInsta" style="flex:1;cursor:pointer;font-weight:600;">انستا باي (InstaPay)</label>
+                </div>
+                
+                <div class="payment-option" data-method="WALLET" role="radio" aria-checked="false" tabindex="0" id="optWallet" style="display:none;">
+                  <input type="radio" name="pay" id="payWallet" />
+                  <label for="payWallet" style="flex:1;cursor:pointer;font-weight:600;">محفظة إلكترونية</label>
+                </div>
+              </div>
+
+              <!-- InstaPay Details -->
+              <div id="instapayDetails" style="display:none" class="payment-details" aria-live="polite">
+                <div style="font-weight:700; color:#1e40af; margin-bottom:0.5rem;">حساب انستا باي:</div>
+                <div id="instapayAddressDisplay" style="font-size:1.4rem; font-weight:800; color:#1d4ed8;" dir="ltr"></div>
+                <div class="file-input" style="margin-top:1rem;">
+                  <label class="file-label" for="instapayReceiptInput">إرفاق صورة التحويل *</label>
+                  <input type="file" id="instapayReceiptInput" accept="image/*" />
+                  <span id="instapayReceiptName" class="muted"></span>
+                </div>
+              </div>
+
+              <!-- Wallet Details -->
+              <div id="walletDetails" style="display:none" class="payment-details" aria-live="polite">
+                <div style="font-weight:700; color:#5b21b6; margin-bottom:0.5rem;">رقم المحفظة:</div>
+                <div id="walletPhoneDisplay" style="font-size:1.4rem; font-weight:800; color:#6d28d9;" dir="ltr"></div>
+                <div class="file-input" style="margin-top:1rem;">
+                  <label class="file-label" for="walletReceiptInput">إرفاق صورة التحويل *</label>
+                  <input type="file" id="walletReceiptInput" accept="image/*" />
+                  <span id="walletReceiptName" class="muted"></span>
+                </div>
+              </div>
+
+            </div>
+            <div class="modal-footer">
+              <div style="display:flex;gap:8px;width:100%;justify-content:space-between;">
+                <button class="qty-btn" id="backToStep1Btn">رجوع</button>
+                <button class="confirm-btn" id="confirmOrderBtn">تأكيد الطلب</button>
+              </div>
+            </div>
         </div>
-        <div class="modal-footer">
-          <div class="muted">المبلغ الكلي: <strong id="modalTotal">0 ر.س</strong></div>
-          <div style="display:flex;gap:8px">
-            <button class="confirm-btn" id="confirmOrderBtn" disabled>تأكيد الطلب</button>
-            <button class="qty-btn" id="closeModal">إلغاء</button>
-          </div>
-        </div>
+
       </div>
     </div>
 
@@ -228,7 +258,7 @@ main.grid{display:grid;grid-template-columns: repeat(2, 1fr);gap:12px;align-item
         </div>
         <div class="success-title">تم استلام طلبك بنجاح!</div>
         <div class="muted">يمكنك أخذ لقطة شاشة لرقم الطلب التالي لتتبعه</div>
-        <div class="order-id" id="orderId">#12345</div>
+        <div class="order-id" id="orderId" dir="ltr">#12345</div>
         <button class="confirm-btn" onclick="location.reload()" style="margin-top: 10px;">طلب جديد</button>
       </div>
     </div>
@@ -262,17 +292,22 @@ const STORAGE_CUSTOMER = 'smile_customer_v1';
 let state = {
   category: 'all',
   cart: {}, // id -> qty
-  payment: {method: 'cod', sub:null, paid:false, receipt:null},
+  payment: {method: 'PAY_ON_DELIVERY', receiptData: null, receiptName: null},
 };
 
 let paymentSettings = {};
 let storeTitle = 'الطلبات الخارجية';
 let storeMsg = 'أهلاً بك، اختر ما طاب لك من قائمتنا المميزة';
+let isDelivery = false;
 
 function $(id){ return document.getElementById(id); }
 
 const elements = {
-  categories: $('categories'), products: $('products'), cartBar: $('cartBar'), cartTotal: $('cartTotal'), cartCount: $('cartCount'), openCheckout: $('openCheckout'), overlay: $('overlay'), itemsList: $('itemsList'), modalTotal: $('modalTotal'), confirmOrderBtn: $('confirmOrderBtn'), closeModal: $('closeModal'), inputName: $('inputName'), inputPhone: $('inputPhone'), inputAddress: $('inputAddress'), paymentMethods: $('paymentMethods'), payNowFlow: $('payNowFlow'), paymentDetails: $('paymentDetails'), paidSection: $('paidSection'), iPaidBtn: $('iPaidBtn'), receiptUpload: $('receiptUpload'), receiptInput: $('receiptInput'), receiptName: $('receiptName'), successView: $('successView'), orderIdEl: $('orderId'), openTrackBtn: $('openTrackBtn'), trackOverlay: $('trackOverlay'), trackBtn: $('trackBtn'), trackInput: $('trackInput'), trackResult: $('trackResult'), trkId: $('trkId'), trkTime: $('trkTime'), trkStatus: $('trkStatus'), closeTrackBtn: $('closeTrackBtn')
+  categories: $('categories'), products: $('products'), cartBar: $('cartBar'), cartTotal: $('cartTotal'), cartCount: $('cartCount'), openCheckout: $('openCheckout'), overlay: $('overlay'), itemsList: $('itemsList'), modalTotal: $('modalTotal'), continueToPaymentBtn: $('continueToPaymentBtn'), closeModal: $('closeModal'), inputName: $('inputName'), inputPhone: $('inputPhone'), inputAddress: $('inputAddress'), paymentMethods: $('paymentMethods'), 
+  checkoutStep1: $('checkoutStep1'), checkoutStep2: $('checkoutStep2'), backToStep1Btn: $('backToStep1Btn'), confirmOrderBtn: $('confirmOrderBtn'),
+  optInsta: $('optInsta'), optWallet: $('optWallet'), instapayDetails: $('instapayDetails'), walletDetails: $('walletDetails'),
+  instapayReceiptInput: $('instapayReceiptInput'), walletReceiptInput: $('walletReceiptInput'), instapayReceiptName: $('instapayReceiptName'), walletReceiptName: $('walletReceiptName'),
+  successView: $('successView'), orderIdEl: $('orderId'), openTrackBtn: $('openTrackBtn'), trackOverlay: $('trackOverlay'), trackBtn: $('trackBtn'), trackInput: $('trackInput'), trackResult: $('trackResult'), trkId: $('trkId'), trkTime: $('trkTime'), trkStatus: $('trkStatus'), closeTrackBtn: $('closeTrackBtn')
 };
 
 function money(v){ return parseFloat(v).toFixed(2) + ' ج.م'; }
@@ -291,6 +326,12 @@ function loadState(){
   storeMsg = urlParams.get('msg') || 'الطلب الخارجي - خدمة سريعة وأنيقة';
   document.querySelector('.store-name').textContent = storeTitle;
   document.querySelector('.tagline').textContent = storeMsg;
+  
+  if (storeTitle.includes("دليفري") || storeTitle.includes("خارجي")) {
+      elements.inputAddress.style.display = 'block';
+      elements.inputAddress.required = true;
+      isDelivery = true;
+  }
 }
 function saveCart(){ try{ localStorage.setItem(STORAGE_CART, JSON.stringify({cart:state.cart})); }catch(e){console.warn(e);} }
 function saveCustomer(){ try{ const c = {name: elements.inputName.value.trim(), phone: elements.inputPhone.value.trim(), address: elements.inputAddress.value.trim()}; localStorage.setItem(STORAGE_CUSTOMER, JSON.stringify(c)); }catch(e){console.warn(e);} }
@@ -303,33 +344,92 @@ function renderProducts(){ elements.products.innerHTML=''; const items = PRODUCT
 function addToCart(productId){ state.cart[productId] = (state.cart[productId]||0) + 1; updateCartUI(); saveCart(); }
 function updateCartUI(){ const entries = Object.entries(state.cart).filter(([k,v])=>v>0); const count = entries.reduce((s,[k,v])=> s+v,0); const total = entries.reduce((s,[k,v])=>{ const prod = PRODUCTS.find(p=>p.id==k); return s + ((prod?.price||0) * v); },0); elements.cartCount.textContent = count + ' عنصر'; elements.cartTotal.textContent = money(total); elements.modalTotal.textContent = money(total); if(count>0){ elements.cartBar.classList.add('visible'); elements.cartBar.setAttribute('aria-hidden','false'); } else { elements.cartBar.classList.remove('visible'); elements.cartBar.setAttribute('aria-hidden','true'); } }
 
-// Modal & focus trap
-let lastFocused=null; let trapOverlay=null; function trapFocus(container){ trapOverlay = container; const focusableEls = container.querySelectorAll('a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'); if(focusableEls.length>0){ const firstFocusable = focusableEls[0]; const lastFocusable = focusableEls[focusableEls.length-1]; container.addEventListener('keydown', function handle(e){ if(e.key==='Tab'){ if(e.shiftKey){ if(document.activeElement===firstFocusable){ e.preventDefault(); lastFocusable.focus(); } } else { if(document.activeElement===lastFocusable){ e.preventDefault(); firstFocusable.focus(); } } } if(e.key==='Escape'){ closeModal(); } }); } }
-function releaseFocusTrap(){ if(trapOverlay){ trapOverlay.removeEventListener('keydown', ()=>{}); trapOverlay=null; } }
+// Modal
+function openModal(){ 
+    elements.checkoutStep1.style.display = 'block';
+    elements.checkoutStep2.style.display = 'none';
+    renderItemsList(); 
+    elements.overlay.classList.add('open'); 
+    validateStep1(); 
+}
+function closeModal(){ elements.overlay.classList.remove('open'); }
 
-function openModal(){ renderItemsList(); elements.overlay.classList.add('open'); elements.overlay.setAttribute('aria-hidden','false'); lastFocused = document.activeElement; setTimeout(()=>{ elements.inputName.focus(); },50); renderPaymentUI(); validateConfirmState(); trapFocus(elements.overlay); }
-function closeModal(){ elements.overlay.classList.remove('open'); elements.overlay.setAttribute('aria-hidden','true'); releaseFocusTrap(); if(lastFocused) lastFocused.focus(); }
+function renderItemsList(){ elements.itemsList.innerHTML=''; const entries = Object.entries(state.cart).filter(([k,v])=>v>0); if(entries.length===0){ elements.itemsList.innerHTML = '<div class="muted">السلة فارغة</div>'; return; } entries.forEach(([id,qty])=>{ const prod = PRODUCTS.find(p=>p.id==id); if(!prod) return; const item = document.createElement('div'); item.className='cart-item'; item.innerHTML = `<div style="text-align:right"><div style="font-weight:800">${prod.name}</div><div class="muted">${money(prod.price)} لكل وحدة</div></div><div class="qty-controls"><button class="qty-btn" data-act="dec" data-id="${id}">-</button><div style="min-width:34px;text-align:center">${qty}</div><button class="qty-btn" data-act="inc" data-id="${id}">+</button></div>`; elements.itemsList.appendChild(item); }); elements.itemsList.querySelectorAll('.qty-btn').forEach(btn=>{ btn.onclick = ()=>{ const act=btn.dataset.act; const id=btn.dataset.id; if(act==='inc') state.cart[id] = (state.cart[id]||0)+1; else { state.cart[id] = Math.max(0,(state.cart[id]||0)-1); } if(state.cart[id]===0) delete state.cart[id]; renderItemsList(); updateCartUI(); saveCart(); validateStep1(); } }); }
 
-function renderItemsList(){ elements.itemsList.innerHTML=''; const entries = Object.entries(state.cart).filter(([k,v])=>v>0); if(entries.length===0){ elements.itemsList.innerHTML = '<div class="muted">السلة فارغة</div>'; return; } entries.forEach(([id,qty])=>{ const prod = PRODUCTS.find(p=>p.id==id); if(!prod) return; const item = document.createElement('div'); item.className='cart-item'; item.innerHTML = `<div style="text-align:right"><div style="font-weight:800">${prod.name}</div><div class="muted">${money(prod.price)} لكل وحدة</div></div><div class="qty-controls"><button class="qty-btn" data-act="dec" data-id="${id}">-</button><div style="min-width:34px;text-align:center">${qty}</div><button class="qty-btn" data-act="inc" data-id="${id}">+</button></div>`; elements.itemsList.appendChild(item); }); elements.itemsList.querySelectorAll('.qty-btn').forEach(btn=>{ btn.onclick = ()=>{ const act=btn.dataset.act; const id=btn.dataset.id; if(act==='inc') state.cart[id] = (state.cart[id]||0)+1; else { state.cart[id] = Math.max(0,(state.cart[id]||0)-1); } if(state.cart[id]===0) delete state.cart[id]; renderItemsList(); updateCartUI(); saveCart(); validateConfirmState(); } }); }
+// Step 1 Validation
+['inputName','inputPhone','inputAddress'].forEach(id=>{ $(id).addEventListener('input', validateStep1); });
+function validateStep1(){ 
+    const nameOk = elements.inputName.value.trim().length>0; 
+    const phoneOk = elements.inputPhone.value.trim().length>0; 
+    const addrOk = isDelivery ? elements.inputAddress.value.trim().length>0 : true; 
+    const cartNotEmpty = Object.keys(state.cart).length>0; 
+    elements.continueToPaymentBtn.disabled = !(cartNotEmpty && nameOk && phoneOk && addrOk); 
+}
 
-// Payment UI
-elements.paymentMethods.addEventListener('click', (e)=>{ const opt = e.target.closest('.payment-option'); if(!opt) return; const method = opt.dataset.method; state.payment.method = method; elements.paymentMethods.querySelectorAll('.payment-option').forEach(o=>{ o.classList.toggle('active', o.dataset.method===method); o.setAttribute('aria-checked', o.dataset.method===method); }); renderPaymentUI(); validateConfirmState(); });
+// Proceed to Step 2
+elements.continueToPaymentBtn.addEventListener('click', () => {
+    elements.checkoutStep1.style.display = 'none';
+    elements.checkoutStep2.style.display = 'block';
+    
+    // Setup payment options based on settings
+    elements.optInsta.style.display = paymentSettings.instaPayEnabled ? 'flex' : 'none';
+    elements.optWallet.style.display = paymentSettings.walletEnabled ? 'flex' : 'none';
+    $('instapayAddressDisplay').textContent = paymentSettings.instaPayAddress || 'غير محدد';
+    $('walletPhoneDisplay').textContent = paymentSettings.walletPhoneNumber || 'غير محدد';
+    
+    // Reset payment selection to COD
+    document.getElementById('payCod').checked = true;
+    updatePaymentSelection('PAY_ON_DELIVERY');
+});
 
-function renderPaymentUI(){ if(state.payment.method==='now'){ elements.payNowFlow.style.display='flex'; } else { elements.payNowFlow.style.display='none'; elements.paymentDetails.style.display='none'; elements.paidSection.hidden=true; elements.receiptUpload.style.display='none'; state.payment.sub=null; state.payment.paid=false; state.payment.receipt=null; elements.receiptName.textContent=''; } }
+elements.backToStep1Btn.addEventListener('click', () => {
+    elements.checkoutStep2.style.display = 'none';
+    elements.checkoutStep1.style.display = 'block';
+});
 
-document.querySelectorAll('.payment-sub').forEach(btn=>{ btn.addEventListener('click', ()=>{ document.querySelectorAll('.payment-sub').forEach(b=>b.classList.toggle('active', b===btn)); state.payment.sub = btn.dataset.sub; elements.paymentDetails.style.display='block'; elements.paidSection.hidden=false; elements.receiptUpload.style.display='none'; state.payment.paid=false; state.payment.receipt=null; elements.receiptName.textContent=''; elements.paymentDetails.textContent = state.payment.sub==='insta' ? 'يرجى التحويل إلى انستا: ' + (paymentSettings.instaPayAddress || 'غير مسجل') : 'يرجى التحويل إلى المحفظة: ' + (paymentSettings.walletPhoneNumber || 'غير مسجل'); validateConfirmState(); }) });
+// Payment Method Selection
+elements.paymentMethods.addEventListener('click', (e)=>{ 
+    const opt = e.target.closest('.payment-option'); 
+    if(!opt) return; 
+    opt.querySelector('input[type="radio"]').checked = true;
+    updatePaymentSelection(opt.dataset.method);
+});
 
-elements.iPaidBtn.addEventListener('click', ()=>{ elements.receiptUpload.style.display='flex'; state.payment.paid=false; validateConfirmState(); });
+function updatePaymentSelection(method) {
+    state.payment.method = method; 
+    elements.paymentMethods.querySelectorAll('.payment-option').forEach(o=>{ 
+        o.classList.toggle('active', o.dataset.method===method); 
+        o.setAttribute('aria-checked', o.dataset.method===method); 
+    }); 
+    
+    elements.instapayDetails.style.display = (method === 'INSTAPAY') ? 'block' : 'none';
+    elements.walletDetails.style.display = (method === 'WALLET') ? 'block' : 'none';
+}
 
-elements.receiptInput.addEventListener('change', async (e)=>{ const file = e.target.files[0]; if(!file) return; elements.receiptName.textContent = file.name; const data = await readFileAsDataURL(file); state.payment.receipt = {name:file.name, data, file}; state.payment.paid = true; validateConfirmState(); });
+// Handle Receipts
+async function handleReceiptUpload(e) {
+    const file = e.target.files[0]; 
+    if(!file) return; 
+    const dataUrl = await readFileAsDataURL(file); 
+    state.payment.receiptData = dataUrl;
+    state.payment.receiptName = file.name;
+    
+    if (e.target.id === 'instapayReceiptInput') elements.instapayReceiptName.textContent = file.name;
+    if (e.target.id === 'walletReceiptInput') elements.walletReceiptName.textContent = file.name;
+}
+elements.instapayReceiptInput.addEventListener('change', handleReceiptUpload);
+elements.walletReceiptInput.addEventListener('change', handleReceiptUpload);
+
 function readFileAsDataURL(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); }) }
 
-// Validation
-['inputName','inputPhone','inputAddress'].forEach(id=>{ $(id).addEventListener('input', validateConfirmState); });
-function validateConfirmState(){ const nameOk = elements.inputName.value.trim().length>0; const phoneOk = elements.inputPhone.value.trim().length>0; const addrOk = elements.inputAddress.value.trim().length>0; const cartNotEmpty = Object.keys(state.cart).length>0; let paymentOk = true; if(state.payment.method==='now'){ if(!state.payment.sub) paymentOk=false; if(!state.payment.paid) paymentOk=false; } const enabled = cartNotEmpty && nameOk && phoneOk && addrOk && paymentOk; elements.confirmOrderBtn.disabled = !enabled; }
 
-// Submit
+// Submit Final Order
 async function submitOrder(){ 
+  if ((state.payment.method === 'INSTAPAY' || state.payment.method === 'WALLET') && !state.payment.receiptData) {
+      alert('الرجاء إرفاق صورة تحويل الدفع لتأكيد الطلب!');
+      return;
+  }
+
   const items = Object.entries(state.cart).map(([id,qty])=>{ 
     const prod = PRODUCTS.find(p=>p.id==id); 
     if(!prod) return null;
@@ -339,12 +439,6 @@ async function submitOrder(){
   const totalAmount = items.reduce((s,i)=>s + (i.price * i.quantity), 0); 
   const orderId = Math.floor(10000 + Math.random() * 90000).toString();
   
-  let methodStr = 'PAY_ON_DELIVERY';
-  if (state.payment.method === 'now') {
-      if (state.payment.sub === 'insta') methodStr = 'INSTAPAY';
-      else if (state.payment.sub === 'wallet') methodStr = 'WALLET';
-  }
-  
   const payload = {
       id: orderId,
       title: storeTitle,
@@ -353,8 +447,8 @@ async function submitOrder(){
       customerName: elements.inputName.value.trim(),
       customerPhone: elements.inputPhone.value.trim(),
       customerAddress: elements.inputAddress.value.trim(),
-      paymentMethod: methodStr,
-      paymentProofImage: state.payment.receipt ? state.payment.receipt.data : "",
+      paymentMethod: state.payment.method,
+      paymentProofImage: state.payment.receiptData || "",
       isPaid: false,
       status: 'PENDING',
       orderTime: Date.now(),
@@ -367,9 +461,11 @@ async function submitOrder(){
     await db.ref('orders/' + orderId).set(payload);
     saveCustomer();
     showSuccess(orderId);
-    state.cart = {}; state.payment = {method:'cod', sub:null, paid:false, receipt:null}; 
+    state.cart = {}; 
+    state.payment = {method:'PAY_ON_DELIVERY', receiptData:null, receiptName:null}; 
     elements.inputName.value=''; elements.inputPhone.value=''; elements.inputAddress.value=''; 
-    elements.receiptName.textContent=''; 
+    elements.instapayReceiptName.textContent=''; elements.walletReceiptName.textContent='';
+    elements.instapayReceiptInput.value = ''; elements.walletReceiptInput.value = '';
     saveCart(); updateCartUI(); closeModal();
   }catch(err){ 
     console.error(err); 
@@ -382,15 +478,17 @@ async function submitOrder(){
 function showSuccess(id){ document.querySelector('header.app-header').style.display='none'; elements.categories.style.display='none'; elements.products.style.display='none'; elements.cartBar.style.display='none'; elements.successView.classList.add('show'); elements.successView.setAttribute('aria-hidden','false'); elements.orderIdEl.textContent = "#" + id; }
 
 // Tracking feature
-function openTrackModal(){ elements.trackOverlay.classList.add('open'); elements.trackOverlay.setAttribute('aria-hidden','false'); elements.trackInput.focus(); trapFocus(elements.trackOverlay); }
-function closeTrackModal(){ elements.trackOverlay.classList.remove('open'); elements.trackOverlay.setAttribute('aria-hidden','true'); elements.trackResult.style.display='none'; releaseFocusTrap(); }
+function openTrackModal(){ elements.trackOverlay.classList.add('open'); elements.trackOverlay.setAttribute('aria-hidden','false'); elements.trackInput.focus(); }
+function closeTrackModal(){ elements.trackOverlay.classList.remove('open'); elements.trackOverlay.setAttribute('aria-hidden','true'); elements.trackResult.style.display='none'; }
 
 async function trackOrderFlow(){ 
   const id = elements.trackInput.value.trim().replace('#', '').replace('ORD-', ''); 
   if(!id){ alert('ادخل رقم الطلب'); return; }
+  const safeId = id.replace(/[\.\$\[\]\#\/]/g, '');
+  if (!safeId) { alert('رقم الطلب غير صحيح'); return; }
   
   try{
-    const snap = await db.ref('orders/' + id).once('value');
+    const snap = await db.ref('orders/' + safeId).once('value');
     const data = snap.val();
     if (!data) throw new Error('not found');
     
@@ -410,7 +508,7 @@ async function trackOrderFlow(){
 function renderTrackResult({orderId, time, status}){
   elements.trackResult.style.display='flex'; 
   elements.trkId.textContent = orderId; 
-  elements.trkTime.textContent = new Date(time).toLocaleString('ar-EG'); 
+  elements.trkTime.textContent = time ? new Date(time).toLocaleString('ar-EG') : 'غير متوفر'; 
   elements.trkStatus.textContent = status;
 }
 
@@ -422,22 +520,41 @@ $('trackInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') trackOrde
 
 // Fetch data from Firebase
 db.ref('menu').on('value', snap => {
-    const data = snap.val() || {};
-    const cats = data.categories || [];
-    CATEGORIES = [{id:'all', name:'الكل'}, ...cats.map(c => ({id: c.name, name: c.name}))];
-    
-    const prods = data.products || [];
-    PRODUCTS = prods.map(p => ({
-        id: p.id,
-        cat: p.category,
-        name: p.name,
-        price: p.price,
-        img: p.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`
-    }));
-    
-    renderCategories();
-    renderProducts();
-    updateCartUI();
+    try {
+        const data = snap.val() || {};
+        
+        let cats = data.categories || [];
+        if (typeof cats === 'object' && !Array.isArray(cats)) {
+            cats = Object.values(cats);
+        }
+        cats = cats.filter(c => c && c.name);
+        
+        CATEGORIES = [{id:'all', name:'الكل'}, ...cats.map(c => ({id: c.name, name: c.name}))];
+        
+        let prods = data.products || [];
+        if (typeof prods === 'object' && !Array.isArray(prods)) {
+            prods = Object.values(prods);
+        }
+        prods = prods.filter(p => p && p.name && p.price != null);
+        
+        PRODUCTS = prods.map(p => ({
+            id: p.id,
+            cat: p.category || 'all',
+            name: p.name,
+            price: parseFloat(p.price) || 0,
+            img: p.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random`
+        }));
+        
+        if (PRODUCTS.length === 0) {
+            elements.products.innerHTML = '<div class="loading">لا يوجد منتجات متاحة الآن</div>';
+        } else {
+            renderCategories();
+            renderProducts();
+            updateCartUI();
+        }
+    } catch(err) {
+        console.error('Error parsing menu data:', err);
+    }
 });
 
 db.ref('settings/payment').on('value', snap => {
@@ -446,10 +563,8 @@ db.ref('settings/payment').on('value', snap => {
 
 // init
 loadState(); 
-renderCategories(); 
-renderProducts(); 
 updateCartUI(); 
-validateConfirmState();
+validateStep1();
 
 // small dash animation style
 const st = document.createElement('style'); st.textContent='@keyframes dash{to{stroke-dashoffset:0}}'; document.head.appendChild(st);
