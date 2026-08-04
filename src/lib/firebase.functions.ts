@@ -7,7 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 export const getFirebaseConfig = createServerFn({ method: "GET" }).handler(async () => ({
   apiKey: process.env["GOOGLE_API_KEY"] ?? "",
   authDomain: "pos-1-be57e.firebaseapp.com",
-  databaseURL: "https://pos-1-be57e-default-rtdb.firebaseio.com",
+  databaseURL: "https://pos-1-be57e-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "pos-1-be57e",
   storageBucket: "pos-1-be57e.firebasestorage.app",
   messagingSenderId: "1018061612219",
