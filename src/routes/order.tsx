@@ -12,7 +12,9 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { categories, products, formatEgp, type CartItem, type Product } from "@/data/menu";
+import { formatEgp, type CartItem, type Product } from "@/data/menu";
+import { useMenu } from "@/lib/useMenu";
+import { STATUS_LABELS, submitOrder, useOrderStatus, type OrderStatus } from "@/lib/pos-orders";
 
 export const Route = createFileRoute("/order")({
   head: () => ({
@@ -59,9 +61,13 @@ function OrderPage() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const { categories: menuCategories, products, loading: menuLoading, error: menuError } = useMenu();
+  const categories = useMemo(() => menuCategories.map((c) => c.name), [menuCategories]);
+  const orderStatus = useOrderStatus(orderId);
+
   const list = useMemo(
     () => (category === ALL ? products : products.filter((p) => p.category === category)),
-    [category],
+    [products, category],
   );
 
   const count = cart.reduce((s, i) => s + i.quantity, 0);
@@ -113,35 +119,22 @@ function OrderPage() {
       return;
     }
     setSubmitting(true);
-    const payload = {
-      customer: { name: name.trim(), phone: phone.trim(), address: address.trim() },
-      items: cart.map((i) => ({
-        id: i.product.id,
-        name: i.product.name,
-        price: i.product.price,
-        quantity: i.quantity,
-        total: Math.round(i.product.price * i.quantity * 100) / 100,
-      })),
-      total: Math.round(total * 100) / 100,
-      paymentMethod: payment === "cod" ? "cash_on_delivery" : payNow,
-      receipt: receipt ? { fileName: receipt.name, dataUrl: receipt.dataUrl } : null,
-      createdAt: new Date().toISOString(),
-    };
-
     try {
-      const res = await fetch("/api/public/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const id = await submitOrder({
+        cart,
+        total,
+        paymentMethod: payment === "cod" ? "PAY_ON_DELIVERY" : "PAY_NOW",
+        customerName: name.trim(),
+        customerPhone: phone.trim(),
+        customerAddress: address.trim(),
+        explanatoryMessage: payNow ? `دفع عبر ${PAY_DETAILS[payNow].label}` : "",
+        paymentProofImage: receipt?.dataUrl ?? null,
       });
-      const body = res.ok ? await res.json().catch(() => null) : null;
-      setOrderId(body?.orderId ?? `ORD-${Math.floor(10000 + Math.random() * 90000)}`);
+      setOrderId(id);
       setOpen(false);
       setCart([]);
-    } catch {
-      setOrderId(`ORD-${Math.floor(10000 + Math.random() * 90000)}`);
-      setOpen(false);
-      setCart([]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "تعذّر إرسال الطلب، حاول مرة أخرى");
     } finally {
       setSubmitting(false);
     }
