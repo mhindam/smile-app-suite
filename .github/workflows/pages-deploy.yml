@@ -17,16 +17,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Diagnostic: print environment
-        run: |
-          echo "--- node/npm versions ---"
-          node -v
-          npm -v
-          echo "--- workspace contents ---"
-          ls -la
-          echo "--- package.json ---"
-          cat package.json
-
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
@@ -35,8 +25,19 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build
+      - name: Build project
         run: npm run build
+
+      - name: Verify build output
+        run: |
+          echo "--- Build completed ---"
+          if [ -d "dist" ]; then
+            echo "✓ dist directory created successfully"
+            ls -la dist/
+          else
+            echo "✗ ERROR: dist directory not found"
+            exit 1
+          fi
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
