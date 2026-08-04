@@ -28,16 +28,26 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Verify build output
+      - name: Locate and deploy build output
         run: |
-          echo "--- Build completed ---"
+          echo "Looking for build output..."
           if [ -d "dist" ]; then
-            echo "✓ dist directory created successfully"
-            ls -la dist/
+            BUILD_DIR="dist"
+            echo "✓ Found build output in ./dist"
+          elif [ -d ".output/public" ]; then
+            BUILD_DIR=".output/public"
+            echo "✓ Found build output in ./.output/public"
+          elif [ -d ".output" ]; then
+            BUILD_DIR=".output"
+            echo "✓ Found build output in ./.output"
           else
-            echo "✗ ERROR: dist directory not found"
+            echo "ERROR: Build output directory not found"
+            ls -la
             exit 1
           fi
+          
+          echo "Build directory: $BUILD_DIR"
+          ls -la $BUILD_DIR | head -20
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
