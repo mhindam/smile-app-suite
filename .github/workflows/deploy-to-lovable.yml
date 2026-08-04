@@ -26,18 +26,28 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Prepare package for deployment
+      - name: Locate and prepare build output
         run: |
-          mkdir -p .deploy
-          cd .deploy
-          # Package the built dist directory for Lovable
-          if [ -d "../dist" ]; then
-            zip -r site.zip ../dist
-            echo "Successfully created site.zip from dist directory"
+          echo "Looking for build output..."
+          if [ -d "dist" ]; then
+            BUILD_DIR="dist"
+            echo "✓ Found build output in ./dist"
+          elif [ -d ".output" ]; then
+            BUILD_DIR=".output"
+            echo "✓ Found build output in ./.output"
+          elif [ -d ".output/public" ]; then
+            BUILD_DIR=".output/public"
+            echo "✓ Found build output in ./.output/public"
           else
-            echo "ERROR: dist directory not found. Build may have failed."
+            echo "ERROR: Build output directory not found"
+            ls -la
             exit 1
           fi
+
+          mkdir -p .deploy
+          cd .deploy
+          zip -r site.zip ../$BUILD_DIR
+          echo "Successfully created site.zip"
           ls -lh site.zip
 
       - name: Deploy to Lovable
@@ -58,4 +68,4 @@ jobs:
         if: ${{ always() }}
         run: |
           echo "Deployment attempt completed"
-          echo "Check the Lovable project for updates: https://lovable.dev/projects/5d4a9f41-afac-4502-ba79-78ae7e23d10e"
+          echo "Check the Lovable project for updates"
