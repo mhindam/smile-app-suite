@@ -45,6 +45,14 @@ const PAY_DETAILS = {
 
 type PayNowMethod = keyof typeof PAY_DETAILS;
 
+const TRACK_STEPS = [
+  "PENDING",
+  "PREPARING",
+  "ON_THE_WAY",
+  "DELIVERED",
+  "COMPLETED",
+] as const satisfies readonly OrderStatus[];
+
 function OrderPage() {
   const [category, setCategory] = useState(ALL);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -156,8 +164,39 @@ function OrderPage() {
         <div className="w-full max-w-sm rounded-3xl bg-surface p-6 shadow-card">
           <p className="text-sm text-on-surface-variant">رقم الطلب</p>
           <p className="mt-2 break-all text-4xl font-black tracking-tight text-primary sm:text-5xl">
-            #{orderId}
+            #{orderId.slice(0, 8).toUpperCase()}
           </p>
+        </div>
+
+        {/* Live tracking straight from the POS */}
+        <div className="w-full max-w-sm rounded-3xl bg-surface p-6 text-right shadow-card">
+          <p className="mb-4 text-sm font-bold text-on-surface-variant">حالة الطلب</p>
+          <ol className="space-y-3">
+            {TRACK_STEPS.map((step, idx) => {
+              const current = orderStatus ?? "PENDING";
+              const currentIdx = TRACK_STEPS.indexOf(current as (typeof TRACK_STEPS)[number]);
+              const done = currentIdx >= idx && currentIdx !== -1;
+              return (
+                <li key={step} className="flex items-center gap-3">
+                  <span
+                    className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                      done
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary-container text-on-surface-variant"
+                    }`}
+                  >
+                    {done ? <Check className="size-4" strokeWidth={3} /> : idx + 1}
+                  </span>
+                  <span className={done ? "font-bold" : "text-on-surface-variant"}>
+                    {STATUS_LABELS[step]}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+          {orderStatus === "CANCELLED" && (
+            <p className="mt-4 font-bold text-destructive">{STATUS_LABELS.CANCELLED}</p>
+          )}
         </div>
         <button
           onClick={() => {
@@ -197,6 +236,16 @@ function OrderPage() {
           </button>
         ))}
       </nav>
+
+      {(menuLoading || menuError || products.length === 0) && (
+        <p className="px-6 py-8 text-center text-sm text-on-surface-variant">
+          {menuLoading
+            ? "جاري تحميل المنيو..."
+            : menuError
+              ? "تعذّر تحميل المنيو، حاول مرة أخرى"
+              : "لا توجد أصناف متاحة حالياً"}
+        </p>
+      )}
 
       <main className="grid grid-cols-2 gap-3 px-4 pt-1 sm:grid-cols-3 lg:grid-cols-4">
         {list.map((p) => (
