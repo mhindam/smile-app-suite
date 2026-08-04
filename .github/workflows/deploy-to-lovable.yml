@@ -15,25 +15,47 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Prepare package
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+      - name: Prepare package for deployment
         run: |
           mkdir -p .deploy
           cd .deploy
-          # include the single page and assets directory
-          zip -r site.zip ../order-spa.html ../assets || true
+          # Package the built dist directory for Lovable
+          if [ -d "../dist" ]; then
+            zip -r site.zip ../dist
+            echo "Successfully created site.zip from dist directory"
+          else
+            echo "ERROR: dist directory not found. Build may have failed."
+            exit 1
+          fi
           ls -lh site.zip
 
-      - name: Deploy to Lovable (magic link embedded)
+      - name: Deploy to Lovable
         env:
           DEPLOY_URL: "https://lovable.dev/projects/5d4a9f41-afac-4502-ba79-78ae7e23d10e?magic_link=mc_7991fcc2-27ce-4f00-bd69-bd9e2d16eb61"
         run: |
           echo "Deploying to Lovable via embedded magic link..."
-          # POST the zip file to the magic link. The field name is 'file' — change if Lovable expects a different field.
-          curl -sS -X POST "$DEPLOY_URL" -F "file=@.deploy/site.zip" -H "Accept: application/json" -o .deploy/response.json || true
+          cd .deploy
+          curl -sS -X POST "$DEPLOY_URL" \
+            -F "file=@site.zip" \
+            -H "Accept: application/json" \
+            -w "\nHTTP Status: %{http_code}\n" \
+            -o response.json
           echo "Response from Lovable:"
-          cat .deploy/response.json || true
+          cat response.json || echo "No response received"
 
-      - name: Success message
+      - name: Deployment status
         if: ${{ always() }}
         run: |
-          echo "If the previous step succeeded, your site was deployed to Lovable. If it failed, check the magic link and Lovable's acceptance of multipart uploads."
+          echo "Deployment attempt completed"
+          echo "Check the Lovable project for updates: https://lovable.dev/projects/5d4a9f41-afac-4502-ba79-78ae7e23d10e"
