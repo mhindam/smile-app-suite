@@ -2,9 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Coffee, ScanLine, ShoppingCart, Plus, Minus, Trash2, X } from "lucide-react";
 import { toast, Toaster } from "sonner";
-import { categories, products, formatEgp, type CartItem, type Product } from "@/data/menu";
+import { formatEgp, type CartItem, type Product } from "@/data/menu";
 import { PaymentDialog } from "@/components/pos/PaymentDialog";
-import { placeOrder } from "@/lib/orders";
+import { useMenu } from "@/lib/useMenu";
+import { submitOrder } from "@/lib/pos-orders";
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): { title?: string; msg?: string } => ({
@@ -31,7 +32,9 @@ export const Route = createFileRoute("/")({
 
 function PosPage() {
   const { title: qrTitle, msg: qrMessage } = Route.useSearch();
-  const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+  const { categories: menuCategories, products, loading: menuLoading, error: menuError } = useMenu();
+  const categories = useMemo(() => menuCategories.map((c) => c.name), [menuCategories]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -54,9 +57,11 @@ function PosPage() {
     return () => clearInterval(id);
   }, []);
 
+  const activeCategory = selectedCategory ?? categories[0] ?? null;
+
   const categoryProducts = useMemo(
-    () => products.filter((p) => p.category === selectedCategory),
-    [selectedCategory],
+    () => (activeCategory ? products.filter((p) => p.category === activeCategory) : products),
+    [products, activeCategory],
   );
 
   const count = cart.reduce((s, i) => s + i.quantity, 0);
@@ -126,7 +131,7 @@ function PosPage() {
       {/* Categories row */}
       <div className="flex gap-2 overflow-x-auto px-4 py-2">
         {categories.map((cat) => {
-          const active = cat === selectedCategory;
+          const active = cat === activeCategory;
           return (
             <button
               key={cat}
@@ -144,6 +149,16 @@ function PosPage() {
       </div>
 
       {/* Products grid */}
+      {(menuLoading || menuError || products.length === 0) && (
+        <p className="px-6 py-4 text-center text-sm text-on-surface-variant">
+          {menuLoading
+            ? "جاري تحميل المنيو من نقطة البيع..."
+            : menuError
+              ? "تعذّر تحميل المنيو، تأكد من اتصال نقطة البيع"
+              : "لا توجد أصناف في المنيو حالياً"}
+        </p>
+      )}
+
       <main className="grid flex-1 grid-cols-[repeat(auto-fill,minmax(130px,1fr))] content-start gap-3 p-6">
         {categoryProducts.map((product) => (
           <button
@@ -337,15 +352,15 @@ function PosPage() {
             if (sending) return;
             setSending(true);
             try {
-              const code = await placeOrder({
+              const code = await submitOrder({
                 cart,
-                subtotal,
                 total: grandTotal,
-                paymentMethod: method,
-                qrTitle,
-                qrMessage,
-                customerName,
-                customerPhone,
+                paymentMethod: method.toLowerCase() === "cash" ? "PAY_ON_DELIVERY" : "PAY_NOW",
+                title: qrTitle ?? "Web Order",
+                explanatoryMessage: qrMessage ?? "",
+                customerName: customerName.trim(),
+                customerPhone: customerPhone.trim(),
+                customerAddress: "",
               });
               setShowPayment(false);
               setShowCart(false);
