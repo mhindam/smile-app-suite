@@ -352,10 +352,15 @@ function PosPage() {
             if (sending) return;
             setSending(true);
             try {
-              const code = await submitOrder({
+              const { orderNumber } = await submitOrder({
                 cart,
                 total: grandTotal,
-                paymentMethod: method.toLowerCase() === "cash" ? "PAY_ON_DELIVERY" : "PAY_NOW",
+                paymentType:
+                  method.toLowerCase() === "instapay"
+                    ? "INSTAPAY"
+                    : method.toLowerCase() === "wallet"
+                      ? "WALLET"
+                      : "CASH_ON_DELIVERY",
                 title: qrTitle ?? "Web Order",
                 explanatoryMessage: qrMessage ?? "",
                 customerName: customerName.trim(),
@@ -365,7 +370,7 @@ function PosPage() {
               setShowPayment(false);
               setShowCart(false);
               setCart([]);
-              toast.success(`تم إرسال الطلب للكاشير — رقم الطلب ${code}`);
+              toast.success(`تم إرسال الطلب للكاشير — رقم الطلب #${orderNumber}`);
             } catch {
               toast.error("تعذّر إرسال الطلب، حاول مرة أخرى");
             } finally {
