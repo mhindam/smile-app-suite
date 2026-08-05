@@ -1,20 +1,28 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import {
+  Banknote,
   Check,
-  CreditCard,
+  ClipboardList,
   Minus,
   Plus,
+  Smartphone,
   ShoppingBag,
   Trash2,
-  Truck,
   Upload,
   Wallet,
   X,
 } from "lucide-react";
 import { formatEgp, type CartItem, type Product } from "@/data/menu";
 import { useMenu } from "@/lib/useMenu";
-import { STATUS_LABELS, submitOrder, useOrderStatus, type OrderStatus } from "@/lib/pos-orders";
+import { usePaymentSettings } from "@/lib/payment-settings";
+import {
+  STATUS_LABELS,
+  submitOrder,
+  useOrderStatus,
+  type OrderStatus,
+  type PaymentType,
+} from "@/lib/pos-orders";
 
 export const Route = createFileRoute("/order")({
   head: () => ({
@@ -38,12 +46,6 @@ export const Route = createFileRoute("/order")({
 });
 
 const ALL = "الكل";
-const PAY_DETAILS = {
-  instapay: { label: "انستا باي", value: "babrizq@instapay" },
-  wallet: { label: "المحفظة الإلكترونية", value: "0100 000 0000" },
-} as const;
-
-type PayNowMethod = keyof typeof PAY_DETAILS;
 
 const TRACK_STEPS = [
   "PENDING",
@@ -53,6 +55,12 @@ const TRACK_STEPS = [
   "COMPLETED",
 ] as const satisfies readonly OrderStatus[];
 
+const PAY_OPTIONS = [
+  { id: "CASH_ON_DELIVERY", label: "الدفع عند الاستلام", icon: Banknote },
+  { id: "INSTAPAY", label: "انستا باي", icon: Smartphone },
+  { id: "WALLET", label: "محفظة إلكترونية", icon: Wallet },
+] as const satisfies readonly { id: PaymentType; label: string; icon: typeof Wallet }[];
+
 function OrderPage() {
   const [category, setCategory] = useState(ALL);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -60,18 +68,18 @@ function OrderPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [payment, setPayment] = useState<"cod" | "now" | null>(null);
-  const [payNow, setPayNow] = useState<PayNowMethod | null>(null);
-  const [paidClicked, setPaidClicked] = useState(false);
+  const [payment, setPayment] = useState<PaymentType | null>(null);
+  const [paidAmount, setPaidAmount] = useState("");
   const [receipt, setReceipt] = useState<{ name: string; dataUrl: string } | null>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [placed, setPlaced] = useState<{ id: string; number: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { categories: menuCategories, products, loading: menuLoading, error: menuError } = useMenu();
+  const paySettings = usePaymentSettings();
   const categories = useMemo(() => menuCategories.map((c) => c.name), [menuCategories]);
-  const orderStatus = useOrderStatus(orderId);
+  const orderStatus = useOrderStatus(placed?.id ?? null);
 
   const list = useMemo(
     () => (category === ALL ? products : products.filter((p) => p.category === category)),
@@ -80,6 +88,13 @@ function OrderPage() {
 
   const count = cart.reduce((s, i) => s + i.quantity, 0);
   const total = cart.reduce((s, i) => s + i.product.price * i.quantity, 0);
+  const change = Math.max(0, Math.round(((Number(paidAmount) || 0) - total) * 100) / 100);
+  const digitalAccount =
+    payment === "INSTAPAY"
+      ? paySettings.instapayAccount
+      : payment === "WALLET"
+        ? paySettings.walletNumber
+        : null;
 
   const add = (product: Product) =>
     setCart((items) =>
@@ -101,8 +116,15 @@ function OrderPage() {
 
   const canConfirm =
     cart.length > 0 &&
-    (payment === "cod" || (payment === "now" && !!payNow && !!receipt)) &&
+    !!payment &&
+    (payment === "CASH_ON_DELIVERY" || !!receipt) &&
     !submitting;
+
+  function resetPayment(next: PaymentType) {
+    setPayment(next);
+    setReceipt(null);
+    setPaidAmount(next === "CASH_ON_DELIVERY" ? String(Math.round(total * 100) / 100) : "");
+  }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -122,23 +144,29 @@ function OrderPage() {
       setError("من فضلك اكمل الاسم ورقم الهاتف والعنوان");
       return;
     }
-    if (payment === "now" && !receipt) {
-      setError("من فضلك ارفق إيصال الدفع");
+    if (!payment) {
+      setError("من فضلك اختر طريقة الدفع");
+      return;
+    }
+    if (payment !== "CASH_ON_DELIVERY" && !receipt) {
+      setError("من فضلك ارفق صورة إيصال التحويل");
       return;
     }
     setSubmitting(true);
     try {
-      const id = await submitOrder({
+      const { orderId, orderNumber } = await submitOrder({
         cart,
         total,
-        paymentMethod: payment === "cod" ? "PAY_ON_DELIVERY" : "PAY_NOW",
+        paymentType: payment,
         customerName: name.trim(),
         customerPhone: phone.trim(),
         customerAddress: address.trim(),
-        explanatoryMessage: payNow ? `دفع عبر ${PAY_DETAILS[payNow].label}` : "",
+        amountPaid: payment === "CASH_ON_DELIVERY" ? Number(paidAmount) || 0 : null,
+        changeDue: payment === "CASH_ON_DELIVERY" ? change : null,
+        paymentAccount: digitalAccount,
         paymentProofImage: receipt?.dataUrl ?? null,
       });
-      setOrderId(id);
+      setPlaced({ id: orderId, number: orderNumber });
       setOpen(false);
       setCart([]);
     } catch (e) {
@@ -148,36 +176,32 @@ function OrderPage() {
     }
   }
 
-  if (orderId) {
+  if (placed) {
     return (
       <div
         dir="rtl"
-        className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center"
+        className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 py-10 text-center"
       >
         <div className="animate-in zoom-in-50 duration-500 flex size-28 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-fab">
           <Check className="size-16" strokeWidth={3} />
         </div>
         <h1 className="text-2xl font-extrabold">تم استلام طلبك بنجاح!</h1>
-        <p className="text-on-surface-variant">
-          احتفظ برقم الطلب لمتابعة حالته مع الفرع
-        </p>
+        <p className="text-on-surface-variant">احتفظ برقم الطلب لمتابعة حالته مع الفرع</p>
         <div className="w-full max-w-sm rounded-3xl bg-surface p-6 shadow-card">
           <p className="text-sm text-on-surface-variant">رقم الطلب</p>
-          <p className="mt-2 break-all text-4xl font-black tracking-tight text-primary sm:text-5xl">
-            #{orderId.slice(0, 8).toUpperCase()}
-          </p>
+          <p className="mt-2 text-6xl font-black tracking-tight text-primary">#{placed.number}</p>
         </div>
 
         {/* Live tracking straight from the POS */}
         <div className="w-full max-w-sm rounded-3xl bg-surface p-6 text-right shadow-card">
           <p className="mb-4 text-sm font-bold text-on-surface-variant">حالة الطلب</p>
           <ol className="space-y-3">
-            {TRACK_STEPS.map((step, idx) => {
+            {TRACK_STEPS.map((s, idx) => {
               const current = orderStatus ?? "PENDING";
               const currentIdx = TRACK_STEPS.indexOf(current as (typeof TRACK_STEPS)[number]);
               const done = currentIdx >= idx && currentIdx !== -1;
               return (
-                <li key={step} className="flex items-center gap-3">
+                <li key={s} className="flex items-center gap-3">
                   <span
                     className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
                       done
@@ -188,7 +212,7 @@ function OrderPage() {
                     {done ? <Check className="size-4" strokeWidth={3} /> : idx + 1}
                   </span>
                   <span className={done ? "font-bold" : "text-on-surface-variant"}>
-                    {STATUS_LABELS[step]}
+                    {STATUS_LABELS[s]}
                   </span>
                 </li>
               );
@@ -198,30 +222,47 @@ function OrderPage() {
             <p className="mt-4 font-bold text-destructive">{STATUS_LABELS.CANCELLED}</p>
           )}
         </div>
-        <button
-          onClick={() => {
-            setOrderId(null);
-            setPayment(null);
-            setPayNow(null);
-            setPaidClicked(false);
-            setReceipt(null);
-          }}
-          className="rounded-2xl bg-primary px-6 py-3 font-bold text-primary-foreground"
-        >
-          طلب جديد
-        </button>
+
+        <div className="flex w-full max-w-sm flex-col gap-3">
+          <Link
+            to="/track"
+            className="rounded-2xl border border-primary px-6 py-3 font-bold text-primary"
+          >
+            تتبع طلباتي
+          </Link>
+          <button
+            onClick={() => {
+              setPlaced(null);
+              setPayment(null);
+              setReceipt(null);
+              setPaidAmount("");
+            }}
+            className="rounded-2xl bg-primary px-6 py-3 font-bold text-primary-foreground"
+          >
+            طلب جديد
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div dir="rtl" className="min-h-screen bg-background pb-28 text-on-surface">
-      <header className="sticky top-0 z-30 bg-surface px-4 py-4 shadow-card">
-        <h1 className="text-xl font-extrabold">باب رزق</h1>
-        <p className="text-xs text-on-surface-variant">اطلب الآن ووصلك لحد باب البيت</p>
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-surface px-4 py-4 shadow-card">
+        <div className="min-w-0">
+          <h1 className="text-xl font-extrabold">باب رزق</h1>
+          <p className="text-xs text-on-surface-variant">اطلب الآن ووصلك لحد باب البيت</p>
+        </div>
+        <Link
+          to="/track"
+          className="flex shrink-0 items-center gap-2 rounded-2xl bg-secondary-container px-3 py-2 text-sm font-bold text-on-secondary-container"
+        >
+          <ClipboardList className="size-4" />
+          تتبع الطلبات
+        </Link>
       </header>
 
-      <nav className="sticky top-[68px] z-20 flex gap-2 overflow-x-auto bg-background px-4 py-3">
+      <nav className="sticky top-[76px] z-20 flex gap-2 overflow-x-auto bg-background px-4 py-3">
         {[ALL, ...categories].map((cat) => (
           <button
             key={cat}
@@ -287,7 +328,12 @@ function OrderPage() {
         }`}
       >
         <button
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setOpen(true);
+            if (payment === "CASH_ON_DELIVERY" && !paidAmount) {
+              setPaidAmount(String(Math.round(total * 100) / 100));
+            }
+          }}
           className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-3xl bg-primary px-5 py-4 text-primary-foreground shadow-fab"
         >
           <span className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-foreground/15">
@@ -298,7 +344,7 @@ function OrderPage() {
             <span className="block truncate font-extrabold">{formatEgp(total)}</span>
           </span>
           <span className="shrink-0 rounded-2xl bg-primary-foreground/15 px-4 py-2 text-sm font-bold">
-            إتمام الطلب
+            إرسال الطلب
           </span>
         </button>
       </div>
@@ -314,7 +360,7 @@ function OrderPage() {
             className="flex max-h-[92vh] w-full flex-col rounded-t-3xl bg-surface shadow-sheet animate-in slide-in-from-bottom duration-300"
           >
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-4">
-              <h2 className="truncate text-lg font-extrabold">إتمام الطلب</h2>
+              <h2 className="truncate text-lg font-extrabold">إرسال الطلب</h2>
               <button
                 aria-label="إغلاق"
                 onClick={() => setOpen(false)}
@@ -401,103 +447,84 @@ function OrderPage() {
               {/* Payment */}
               <section className="space-y-3">
                 <h3 className="font-bold">طريقة الدفع</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => {
-                      setPayment("cod");
-                      setPayNow(null);
-                      setPaidClicked(false);
-                      setReceipt(null);
-                    }}
-                    className={`flex flex-col items-center gap-2 rounded-2xl border p-4 text-sm font-bold transition-colors ${
-                      payment === "cod"
-                        ? "border-primary bg-primary-container text-on-primary-container"
-                        : "border-border text-on-surface-variant"
-                    }`}
-                  >
-                    <Truck className="size-6" />
-                    الدفع عند الاستلام
-                  </button>
-                  <button
-                    onClick={() => setPayment("now")}
-                    className={`flex flex-col items-center gap-2 rounded-2xl border p-4 text-sm font-bold transition-colors ${
-                      payment === "now"
-                        ? "border-primary bg-primary-container text-on-primary-container"
-                        : "border-border text-on-surface-variant"
-                    }`}
-                  >
-                    <CreditCard className="size-6" />
-                    الدفع الآن
-                  </button>
+                <div className="grid grid-cols-3 gap-2">
+                  {PAY_OPTIONS.map((opt) => {
+                    const Icon = opt.icon;
+                    const active = payment === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => resetPayment(opt.id)}
+                        className={`flex flex-col items-center gap-2 rounded-2xl border p-3 text-center text-xs font-bold transition-colors ${
+                          active
+                            ? "border-primary bg-primary-container text-on-primary-container"
+                            : "border-border text-on-surface-variant"
+                        }`}
+                      >
+                        <Icon className="size-5" />
+                        {opt.label}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {payment === "now" && (
-                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="grid grid-cols-2 gap-3">
-                      {(Object.keys(PAY_DETAILS) as PayNowMethod[]).map((m) => (
-                        <button
-                          key={m}
-                          onClick={() => {
-                            setPayNow(m);
-                            setPaidClicked(false);
-                            setReceipt(null);
-                          }}
-                          className={`flex items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-bold transition-colors ${
-                            payNow === m
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border text-on-surface-variant"
-                          }`}
-                        >
-                          <Wallet className="size-4" />
-                          {PAY_DETAILS[m].label}
-                        </button>
-                      ))}
+                {payment === "CASH_ON_DELIVERY" && (
+                  <div className="space-y-3 rounded-2xl bg-secondary-container p-4 text-on-secondary-container animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label className="block text-sm font-bold">المبلغ المدفوع</label>
+                    <input
+                      value={paidAmount}
+                      onChange={(e) => setPaidAmount(e.target.value)}
+                      inputMode="decimal"
+                      className="w-full rounded-2xl border border-input bg-surface px-4 py-3 text-lg font-bold outline-none focus:border-primary"
+                    />
+                    <div className="flex justify-between text-sm font-bold">
+                      <span>الباقي</span>
+                      <span className="text-primary">{formatEgp(change)}</span>
                     </div>
+                  </div>
+                )}
 
-                    {payNow && (
-                      <div className="space-y-3 rounded-2xl bg-secondary-container p-4 text-on-secondary-container animate-in fade-in duration-300">
-                        <p className="text-sm font-bold">
-                          برجاء التحويل على {PAY_DETAILS[payNow].label}:
-                        </p>
-                        <p className="text-lg font-extrabold" dir="ltr">
-                          {PAY_DETAILS[payNow].value}
-                        </p>
-                        {!paidClicked ? (
-                          <button
-                            onClick={() => setPaidClicked(true)}
-                            className="w-full rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground"
-                          >
-                            تم الدفع
-                          </button>
-                        ) : (
-                          <div className="space-y-2 animate-in fade-in duration-300">
-                            <button
-                              onClick={() => fileRef.current?.click()}
-                              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-primary bg-surface py-3 text-sm font-bold text-primary"
-                            >
-                              <Upload className="size-4" />
-                              {receipt ? "تغيير الإيصال" : "إرفاق إيصال الدفع"}
-                            </button>
-                            <input
-                              ref={fileRef}
-                              type="file"
-                              accept="image/*"
-                              onChange={onFile}
-                              className="hidden"
-                            />
-                            {receipt && (
-                              <div className="flex items-center gap-3 rounded-2xl bg-surface p-2">
-                                <img
-                                  src={receipt.dataUrl}
-                                  alt="إيصال الدفع"
-                                  className="size-12 rounded-xl object-cover"
-                                />
-                                <p className="min-w-0 flex-1 truncate text-xs">{receipt.name}</p>
-                                <Check className="size-5 shrink-0 text-primary" />
-                              </div>
-                            )}
-                          </div>
-                        )}
+                {(payment === "INSTAPAY" || payment === "WALLET") && (
+                  <div className="space-y-3 rounded-2xl bg-secondary-container p-4 text-on-secondary-container animate-in fade-in slide-in-from-top-2 duration-300">
+                    <p className="text-sm font-bold">
+                      {payment === "INSTAPAY"
+                        ? `برجاء تحويل مبلغ ${formatEgp(total)} على حساب انستا باي التالي:`
+                        : `برجاء تحويل مبلغ ${formatEgp(total)} على رقم المحفظة التالي:`}
+                    </p>
+                    <p className="text-center text-2xl font-black tracking-wide" dir="ltr">
+                      {digitalAccount}
+                    </p>
+                    {payment === "INSTAPAY" && paySettings.instapayQrUrl && (
+                      <img
+                        src={paySettings.instapayQrUrl}
+                        alt="QR انستا باي"
+                        className="mx-auto size-40 rounded-2xl bg-surface object-contain p-2"
+                      />
+                    )}
+
+                    <button
+                      onClick={() => fileRef.current?.click()}
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-primary bg-surface py-3 text-sm font-bold text-primary"
+                    >
+                      <Upload className="size-4" />
+                      {receipt ? "تغيير صورة التحويل" : "إرفاق صورة التحويل"}
+                    </button>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={onFile}
+                      className="hidden"
+                    />
+                    {receipt && (
+                      <div className="flex items-center gap-3 rounded-2xl bg-surface p-2">
+                        <img
+                          src={receipt.dataUrl}
+                          alt="إيصال الدفع"
+                          className="size-12 rounded-xl object-cover"
+                        />
+                        <p className="min-w-0 flex-1 truncate text-xs">{receipt.name}</p>
+                        <Check className="size-5 shrink-0 text-primary" />
                       </div>
                     )}
                   </div>
