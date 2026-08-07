@@ -283,11 +283,14 @@ if (!firebase.apps.length) {
 }
 const db = firebase.database();
 
+const urlParams = new URLSearchParams(window.location.search);
+const storeId = urlParams.get('storeId') || 'store_1';
+
 let CATEGORIES = [{id:'all', name:'الكل'}];
 let PRODUCTS = [];
 
-const STORAGE_CART = 'smile_cart_v1';
-const STORAGE_CUSTOMER = 'smile_customer_v1';
+const STORAGE_CART = 'smile_cart_v1_' + storeId;
+const STORAGE_CUSTOMER = 'smile_customer_v1_' + storeId;
 
 let state = {
   category: 'all',
@@ -321,13 +324,12 @@ function loadState(){
     if(custRaw){ const c = JSON.parse(custRaw); if(c.name) elements.inputName.value = c.name; if(c.phone) elements.inputPhone.value = c.phone; if(c.address) elements.inputAddress.value = c.address; }
   }catch(e){ console.warn('loadState',e); }
   
-  const urlParams = new URLSearchParams(window.location.search);
   storeTitle = urlParams.get('title') || 'مطعم الابتسامة';
   storeMsg = urlParams.get('msg') || 'الطلب الخارجي - خدمة سريعة وأنيقة';
   document.querySelector('.store-name').textContent = storeTitle;
   document.querySelector('.tagline').textContent = storeMsg;
   
-  if (storeTitle.includes("دليفري") || storeTitle.includes("خارجي")) {
+  if (storeTitle.includes("دليفري") || storeTitle.includes("خارجي") || storeTitle.includes("توصيل")) {
       elements.inputAddress.style.display = 'block';
       elements.inputAddress.required = true;
       isDelivery = true;
@@ -441,6 +443,8 @@ async function submitOrder(){
   
   const payload = {
       id: orderId,
+      storeId: storeId,
+      orgId: storeId,
       title: storeTitle,
       explanatoryMessage: storeMsg,
       totalAmount: totalAmount,
@@ -458,7 +462,9 @@ async function submitOrder(){
   const btn = elements.confirmOrderBtn; btn.disabled=true; btn.textContent='جارٍ الإرسال...';
   
   try{
-    await db.ref('orders/' + orderId).set(payload);
+    // Write specifically to the store's order path so only they see it!
+    await db.ref(storeId + '/orders/' + orderId).set(payload);
+    
     saveCustomer();
     showSuccess(orderId);
     state.cart = {}; 
@@ -488,7 +494,7 @@ async function trackOrderFlow(){
   if (!safeId) { alert('رقم الطلب غير صحيح'); return; }
   
   try{
-    const snap = await db.ref('orders/' + safeId).once('value');
+    const snap = await db.ref(storeId + '/orders/' + safeId).once('value');
     const data = snap.val();
     if (!data) throw new Error('not found');
     
@@ -519,7 +525,7 @@ $('openTrackBtn').addEventListener('click', openTrackModal); $('closeTrackBtn').
 $('trackInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') trackOrderFlow(); });
 
 // Fetch data from Firebase
-db.ref('menu').on('value', snap => {
+db.ref(storeId + '/menu').on('value', snap => {
     try {
         const data = snap.val() || {};
         
@@ -557,7 +563,7 @@ db.ref('menu').on('value', snap => {
     }
 });
 
-db.ref('settings/payment').on('value', snap => {
+db.ref(storeId + '/settings/payment').on('value', snap => {
     paymentSettings = snap.val() || {};
 });
 
