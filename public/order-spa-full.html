@@ -161,7 +161,7 @@ main.grid{display:grid;grid-template-columns: repeat(2, 1fr);gap:12px;align-item
             <div class="modal-footer">
               <div class="muted">الإجمالي: <strong id="modalTotal">0 ج.م</strong></div>
               <div style="display:flex;gap:8px">
-                <button class="confirm-btn" id="continueToPaymentBtn" disabled>متابعة الدفع</button>
+                <button class="confirm-btn" id="continueToPaymentBtn">متابعة الدفع</button>
                 <button class="qty-btn" id="closeModal">إلغاء</button>
               </div>
             </div>
@@ -352,24 +352,26 @@ function openModal(){
     elements.checkoutStep2.style.display = 'none';
     renderItemsList(); 
     elements.overlay.classList.add('open'); 
-    validateStep1(); 
+     
 }
 function closeModal(){ elements.overlay.classList.remove('open'); }
 
-function renderItemsList(){ elements.itemsList.innerHTML=''; const entries = Object.entries(state.cart).filter(([k,v])=>v>0); if(entries.length===0){ elements.itemsList.innerHTML = '<div class="muted">السلة فارغة</div>'; return; } entries.forEach(([id,qty])=>{ const prod = PRODUCTS.find(p=>p.id==id); if(!prod) return; const item = document.createElement('div'); item.className='cart-item'; item.innerHTML = `<div style="text-align:right"><div style="font-weight:800">${prod.name}</div><div class="muted">${money(prod.price)} لكل وحدة</div></div><div class="qty-controls"><button class="qty-btn" data-act="dec" data-id="${id}">-</button><div style="min-width:34px;text-align:center">${qty}</div><button class="qty-btn" data-act="inc" data-id="${id}">+</button></div>`; elements.itemsList.appendChild(item); }); elements.itemsList.querySelectorAll('.qty-btn').forEach(btn=>{ btn.onclick = ()=>{ const act=btn.dataset.act; const id=btn.dataset.id; if(act==='inc') state.cart[id] = (state.cart[id]||0)+1; else { state.cart[id] = Math.max(0,(state.cart[id]||0)-1); } if(state.cart[id]===0) delete state.cart[id]; renderItemsList(); updateCartUI(); saveCart(); validateStep1(); } }); }
+function renderItemsList(){ elements.itemsList.innerHTML=''; const entries = Object.entries(state.cart).filter(([k,v])=>v>0); if(entries.length===0){ elements.itemsList.innerHTML = '<div class="muted">السلة فارغة</div>'; return; } entries.forEach(([id,qty])=>{ const prod = PRODUCTS.find(p=>p.id==id); if(!prod) return; const item = document.createElement('div'); item.className='cart-item'; item.innerHTML = `<div style="text-align:right"><div style="font-weight:800">${prod.name}</div><div class="muted">${money(prod.price)} لكل وحدة</div></div><div class="qty-controls"><button class="qty-btn" data-act="dec" data-id="${id}">-</button><div style="min-width:34px;text-align:center">${qty}</div><button class="qty-btn" data-act="inc" data-id="${id}">+</button></div>`; elements.itemsList.appendChild(item); }); elements.itemsList.querySelectorAll('.qty-btn').forEach(btn=>{ btn.onclick = ()=>{ const act=btn.dataset.act; const id=btn.dataset.id; if(act==='inc') state.cart[id] = (state.cart[id]||0)+1; else { state.cart[id] = Math.max(0,(state.cart[id]||0)-1); } if(state.cart[id]===0) delete state.cart[id]; renderItemsList(); updateCartUI(); saveCart();  } }); }
 
-// Step 1 Validation
-['inputName','inputPhone','inputAddress'].forEach(id=>{ $(id).addEventListener('input', validateStep1); });
-function validateStep1(){ 
+// Remove input listeners since we validate on click now
+
+// Proceed to Step 2
+elements.continueToPaymentBtn.addEventListener('click', () => {
     const nameOk = elements.inputName.value.trim().length>0; 
     const phoneOk = elements.inputPhone.value.trim().length>0; 
     const addrOk = isDelivery ? elements.inputAddress.value.trim().length>0 : true; 
     const cartNotEmpty = Object.keys(state.cart).length>0; 
-    elements.continueToPaymentBtn.disabled = !(cartNotEmpty && nameOk && phoneOk && addrOk); 
-}
 
-// Proceed to Step 2
-elements.continueToPaymentBtn.addEventListener('click', () => {
+    if (!cartNotEmpty) { alert("السلة فارغة!"); return; }
+    if (!nameOk) { alert("الرجاء إدخال الاسم الكريم"); elements.inputName.focus(); return; }
+    if (!phoneOk) { alert("الرجاء إدخال رقم الهاتف للتواصل"); elements.inputPhone.focus(); return; }
+    if (!addrOk) { alert("الرجاء إدخال العنوان لتوصيل الطلب"); elements.inputAddress.focus(); return; }
+
     elements.checkoutStep1.style.display = 'none';
     elements.checkoutStep2.style.display = 'block';
     
@@ -570,8 +572,6 @@ db.ref(storeId + '/settings/payment').on('value', snap => {
 // init
 loadState(); 
 updateCartUI(); 
-validateStep1();
-
 // small dash animation style
 const st = document.createElement('style'); st.textContent='@keyframes dash{to{stroke-dashoffset:0}}'; document.head.appendChild(st);
 
