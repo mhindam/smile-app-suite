@@ -1,6 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Coffee, ScanLine, ShoppingCart, Plus, Minus, Trash2, X } from "lucide-react";
+import {
+  Coffee,
+  ScanLine,
+  ShoppingCart,
+  ShoppingBag,
+  ClipboardList,
+  Plus,
+  Minus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { formatEgp, type CartItem, type Product } from "@/data/menu";
 import { PaymentDialog } from "@/components/pos/PaymentDialog";
