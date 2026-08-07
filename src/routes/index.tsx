@@ -344,8 +344,34 @@ function PosPage() {
                   placeholder="رقم الموبايل *"
                   className="rounded-2xl border border-input bg-surface px-4 py-3 text-sm outline-none focus:border-primary"
                 />
-
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setCart([])}
+                  className="flex-1 rounded-2xl border border-input py-3 text-sm font-semibold text-primary"
+                >
+                  مسح السلة
+                </button>
+                <button
+                  onClick={() => toast("تم تعليق الطلب")}
+                  className="flex-1 rounded-2xl border border-input py-3 text-sm font-semibold text-primary"
+                >
+                  تعليق الطلب
+                </button>
+              </div>
+              <button
+                disabled={
+                  cart.length === 0 ||
+                  customerName.trim().length < 2 ||
+                  customerPhone.trim().length < 8
+                }
+                onClick={() => setShowPayment(true)}
+                className="w-full rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground disabled:opacity-40"
+              >
+                إتمام الدفع
+              </button>
             </div>
+
           </div>
         </div>
       )}
