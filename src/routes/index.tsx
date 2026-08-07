@@ -332,38 +332,19 @@ function PosPage() {
                 <input
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="اسمك (اختياري)"
+                  maxLength={100}
+                  placeholder="اسمك *"
                   className="rounded-2xl border border-input bg-surface px-4 py-3 text-sm outline-none focus:border-primary"
                 />
                 <input
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
                   inputMode="tel"
-                  placeholder="رقم الموبايل (اختياري)"
+                  maxLength={20}
+                  placeholder="رقم الموبايل *"
                   className="rounded-2xl border border-input bg-surface px-4 py-3 text-sm outline-none focus:border-primary"
                 />
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setCart([])}
-                  className="flex-1 rounded-2xl border border-input py-3 text-sm font-semibold text-primary"
-                >
-                  مسح السلة
-                </button>
-                <button
-                  onClick={() => toast("تم تعليق الطلب")}
-                  className="flex-1 rounded-2xl border border-input py-3 text-sm font-semibold text-primary"
-                >
-                  تعليق الطلب
-                </button>
-              </div>
-              <button
-                disabled={cart.length === 0}
-                onClick={() => setShowPayment(true)}
-                className="w-full rounded-2xl bg-primary py-4 text-base font-bold text-primary-foreground disabled:opacity-40"
-              >
-                إتمام الدفع
-              </button>
+
             </div>
           </div>
         </div>
