@@ -117,8 +117,12 @@ function OrderPage() {
   const canConfirm =
     cart.length > 0 &&
     !!payment &&
+    name.trim().length >= 2 &&
+    phone.trim().length >= 8 &&
+    address.trim().length > 0 &&
     (payment === "CASH_ON_DELIVERY" || !!receipt) &&
     !submitting;
+
 
   function resetPayment(next: PaymentType) {
     setPayment(next);
